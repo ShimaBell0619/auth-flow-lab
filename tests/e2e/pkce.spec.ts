@@ -15,7 +15,7 @@ test("PKCE blocks the simulated intercepted-code exchange", async ({ page }) => 
   await expect(page.getByText("攻撃失敗", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Protocol" }).click();
-  await expect(page.getByText(/invalid_grant/)).toBeVisible();
+  await expect(page.getByText("400 invalid_grant · verifier missing/mismatch", { exact: true })).toBeVisible();
 });
 
 test("Break it skips PKCE-only steps and shows the insecure comparison", async ({ page }) => {
@@ -29,6 +29,17 @@ test("Break it skips PKCE-only steps and shows the insecure comparison", async (
   await page.getByRole("button", { name: "ログインして認可コードを受け取る" }).click();
   await page.getByRole("button", { name: "攻撃者に交換させてみる" }).click();
   await expect(page.getByText("攻撃成功（実験）", { exact: true })).toBeVisible();
+});
+
+test("core controls are reachable in a logical keyboard order", async ({ page }) => {
+  await page.goto("/");
+
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Story" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Protocol" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: /Break it/ })).toBeFocused();
 });
 
 test("the 320px layout does not overflow horizontally", async ({ page }) => {

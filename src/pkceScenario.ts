@@ -33,7 +33,10 @@ export const scenarioSteps: readonly ScenarioStep[] = [
     protocolTitle: "code_verifier を生成",
     protocolBody:
       "PKCEクライアントは高エントロピーな code_verifier を生成し、後のトークン交換まで保持します。",
-    wire: ["code_verifier = random(43..128 chars)", "local only · not transmitted yet"],
+    wire: [
+      "code_verifier = high_entropy_random(43..128 unreserved chars)",
+      "local only · not transmitted yet",
+    ],
     packet: "code_verifier",
     nextAction: "秘密を生成する",
   },
@@ -48,7 +51,7 @@ export const scenarioSteps: readonly ScenarioStep[] = [
     protocolBody:
       "S256では verifier をSHA-256で変換し、base64url化した値を code_challenge として送ります。",
     wire: [
-      "code_challenge = BASE64URL(SHA256(code_verifier))",
+      "code_challenge = BASE64URL(SHA256(ASCII(code_verifier)))",
       "GET /authorize?...&code_challenge=...&code_challenge_method=S256",
     ],
     packet: "code_challenge",
@@ -92,7 +95,10 @@ export const scenarioSteps: readonly ScenarioStep[] = [
     protocolTitle: "Token Endpoint が verifier を照合",
     protocolBody:
       "code_verifier から再計算した challenge と、認可時に保持した challenge が一致する場合だけコード交換が成立します。",
-    wire: ["POST /token code=AUTH_CODE&code_verifier=...", "mismatch / missing verifier → invalid_grant"],
+    wire: [
+      "POST /token code=AUTH_CODE&code_verifier=...",
+      "mismatch / missing verifier → invalid_grant",
+    ],
     packet: "token exchange",
     nextAction: "正規アプリで交換を完了する",
   },
@@ -111,9 +117,6 @@ export const scenarioSteps: readonly ScenarioStep[] = [
     nextAction: "安全な流れをもう一度見る",
   },
 ] as const;
-
-export const clampStepIndex = (index: number): number =>
-  Math.min(Math.max(index, 0), scenarioSteps.length - 1);
 
 export const nextStepIndex = (index: number): number =>
   index >= scenarioSteps.length - 1 ? 0 : index + 1;

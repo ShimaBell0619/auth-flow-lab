@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   apiOutcome,
   exchangeOutcome,
@@ -46,8 +46,8 @@ function App() {
   const [viewMode, setViewMode] = useState<ViewMode>("story");
 
   const step = scenarioSteps[stepIndex];
-  const exchange = useMemo(() => exchangeOutcome(flowMode), [flowMode]);
-  const api = useMemo(() => apiOutcome(flowMode), [flowMode]);
+  const exchange = exchangeOutcome(flowMode);
+  const api = apiOutcome(flowMode);
   const isExchange = step.id === "exchange";
   const isApi = step.id === "api";
   const isUnsafe = flowMode === "insecure";
@@ -89,7 +89,8 @@ function App() {
         </div>
 
         <div className="topbar-controls">
-          <div className="view-control" role="group" aria-label="表示モード">
+          <fieldset className="view-control">
+            <legend className="sr-only">表示モード</legend>
             <button
               type="button"
               className={viewMode === "story" ? "is-selected" : ""}
@@ -106,7 +107,7 @@ function App() {
             >
               Protocol
             </button>
-          </div>
+          </fieldset>
           <button
             type="button"
             className={`break-button ${isUnsafe ? "is-restoring" : ""}`}
@@ -200,7 +201,7 @@ function App() {
             active={["intercept", "exchange", "api"].includes(step.id)}
           />
 
-          <div className={`protocol-packet packet-${step.id}`} aria-live="polite">
+          <div className={`protocol-packet packet-${step.id}`}>
             <span className="packet-pulse" aria-hidden="true" />
             <span className="packet-label">{step.packet}</span>
           </div>
