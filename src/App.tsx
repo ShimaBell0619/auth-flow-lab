@@ -8,7 +8,8 @@ import {
   type ViewMode,
 } from "./pkceScenario";
 
-const stepTone = (index: number, activeIndex: number) => {
+const stepTone = (index: number, activeIndex: number, isUnsafe: boolean) => {
+  if (isUnsafe && index < 2) return "skipped";
   if (index < activeIndex) return "complete";
   if (index === activeIndex) return "current";
   return "upcoming";
@@ -52,7 +53,13 @@ function App() {
   const isUnsafe = flowMode === "insecure";
 
   const toggleSafetyMode = () => {
-    setFlowMode((current) => (current === "safe" ? "insecure" : "safe"));
+    if (flowMode === "safe") {
+      setFlowMode("insecure");
+      setStepIndex(2);
+      return;
+    }
+
+    setFlowMode("safe");
     setStepIndex(0);
   };
 
@@ -82,7 +89,7 @@ function App() {
         </div>
 
         <div className="topbar-controls">
-          <div className="view-control" aria-label="表示モード">
+          <div className="view-control" role="group" aria-label="表示モード">
             <button
               type="button"
               className={viewMode === "story" ? "is-selected" : ""}
@@ -127,7 +134,7 @@ function App() {
               <strong>{isUnsafe ? "実験モード · PKCE OFF" : "推奨フロー · PKCE ON"}</strong>
               <small>
                 {isUnsafe
-                  ? "比較用の意図的に危険なシミュレーション"
+                  ? "verifier / challenge を使わない比較用シミュレーション"
                   : "code_verifier でコード交換を結び付ける"}
               </small>
             </span>
@@ -135,20 +142,25 @@ function App() {
         </div>
 
         <nav className="scenario-rail" aria-label="PKCE学習ステップ">
-          {scenarioSteps.map((railStep, index) => (
-            <button
-              type="button"
-              key={railStep.id}
-              className={`rail-step is-${stepTone(index, stepIndex)}`}
-              aria-current={index === stepIndex ? "step" : undefined}
-              onClick={() => setStepIndex(index)}
-            >
-              <span className="rail-dot" aria-hidden="true">
-                {index < stepIndex ? "✓" : String(index + 1).padStart(2, "0")}
-              </span>
-              <span>{railStep.shortLabel}</span>
-            </button>
-          ))}
+          {scenarioSteps.map((railStep, index) => {
+            const skipped = isUnsafe && index < 2;
+            return (
+              <button
+                type="button"
+                key={railStep.id}
+                className={`rail-step is-${stepTone(index, stepIndex, isUnsafe)}`}
+                aria-current={index === stepIndex ? "step" : undefined}
+                disabled={skipped}
+                title={skipped ? "PKCE OFFではこの工程を使用しません" : undefined}
+                onClick={() => setStepIndex(index)}
+              >
+                <span className="rail-dot" aria-hidden="true">
+                  {skipped ? "—" : index < stepIndex ? "✓" : String(index + 1).padStart(2, "0")}
+                </span>
+                <span>{skipped ? `${railStep.shortLabel} · SKIP` : railStep.shortLabel}</span>
+              </button>
+            );
+          })}
         </nav>
 
         <div className="protocol-stage" data-step={step.id}>
@@ -163,14 +175,14 @@ function App() {
             id="browser"
             eyebrow="PUBLIC CLIENT"
             title="Browser / App"
-            detail="秘密の原本を保持"
+            detail={isUnsafe ? "Authorization Codeを受け取る" : "秘密の原本を保持"}
             active={["secret", "challenge", "authorize", "exchange"].includes(step.id)}
           />
           <Actor
             id="auth"
             eyebrow="AUTHORIZATION SERVER"
             title="Auth Server"
-            detail="challenge と code を関連付ける"
+            detail={isUnsafe ? "code を発行・交換" : "challenge と code を関連付ける"}
             active={["challenge", "authorize", "exchange"].includes(step.id)}
           />
           <Actor
