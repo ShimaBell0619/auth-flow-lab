@@ -7,6 +7,14 @@ const advanceSafeFlowToExchange = async (page: Page) => {
   await page.getByRole("button", { name: "攻撃者に交換させてみる" }).click();
 };
 
+test("Story keeps wire detail hidden until Protocol is requested", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByText("LIVE PROTOCOL")).toBeHidden();
+  await page.getByRole("button", { name: "Protocol" }).click();
+  await expect(page.getByText("LIVE PROTOCOL")).toBeVisible();
+});
+
 test("PKCE blocks the simulated intercepted-code exchange", async ({ page }) => {
   await page.goto("/");
 
@@ -15,7 +23,9 @@ test("PKCE blocks the simulated intercepted-code exchange", async ({ page }) => 
   await expect(page.getByText("攻撃失敗", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Protocol" }).click();
-  await expect(page.getByText("400 invalid_grant · verifier missing/mismatch", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("400 invalid_grant · verifier missing/mismatch", { exact: true }),
+  ).toBeVisible();
 });
 
 test("Break it skips PKCE-only steps and shows the insecure comparison", async ({ page }) => {
