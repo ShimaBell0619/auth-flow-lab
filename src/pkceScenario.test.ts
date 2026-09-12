@@ -1,31 +1,44 @@
 import { describe, expect, it } from "vitest";
-import {
-  apiOutcome,
-  exchangeOutcome,
-  nextStepIndex,
-  scenarioSteps,
-} from "./pkceScenario";
+import { buildSequence, nextStepIndex, previousStepIndex } from "./pkceScenario";
 
-describe("PKCE learning scenario", () => {
-  it("advances through each learning action and loops after the final scene", () => {
-    expect(nextStepIndex(0)).toBe(1);
-    expect(nextStepIndex(scenarioSteps.length - 2)).toBe(scenarioSteps.length - 1);
-    expect(nextStepIndex(scenarioSteps.length - 1)).toBe(0);
+describe("PKCE learning sequence", () => {
+  it("shows explicit request and response directions through the safe flow", () => {
+    const events = buildSequence("safe");
+    const codeReturn = events.find((event) => event.id === "code-return");
+    const tokenReturn = events.find((event) => event.id === "token-return");
+    const apiResponse = events.find((event) => event.id === "api-response");
+
+    expect(codeReturn).toMatchObject({ from: "auth", to: "client", kind: "redirect" });
+    expect(tokenReturn).toMatchObject({ from: "token", to: "client", kind: "success" });
+    expect(apiResponse).toMatchObject({ from: "api", to: "client", kind: "success" });
   });
 
-  it("blocks the intercepted-code exchange when PKCE is enabled", () => {
-    const outcome = exchangeOutcome("safe");
+  it("blocks the intercepted code with PKCE and exposes invalid_grant", () => {
+    const result = buildSequence("safe").find((event) => event.id === "attacker-result");
 
-    expect(outcome.compromised).toBe(false);
-    expect(outcome.label).toBe("攻撃失敗");
-    expect(outcome.wire).toContain("invalid_grant");
+    expect(result?.kind).toBe("error");
+    expect(result?.label).toContain("invalid_grant");
+    expect(result?.wire.join(" ")).toContain("400");
   });
 
-  it("shows the intentionally insecure comparison when PKCE is disabled", () => {
-    const outcome = exchangeOutcome("insecure");
+  it("keeps the same sequence shape while making PKCE-only events visibly skipped", () => {
+    const safe = buildSequence("safe");
+    const insecure = buildSequence("insecure");
 
-    expect(outcome.compromised).toBe(true);
-    expect(outcome.label).toContain("実験");
-    expect(apiOutcome("insecure").label).toContain("攻撃者");
+    expect(insecure).toHaveLength(safe.length);
+    expect(insecure[0]?.skipped).toBe(true);
+    expect(insecure[1]?.skipped).toBe(true);
+    expect(insecure.find((event) => event.id === "attacker-result")).toMatchObject({
+      kind: "success",
+      to: "attacker",
+    });
+    expect(insecure.find((event) => event.id === "api-request")?.from).toBe("attacker");
+  });
+
+  it("navigation skips intentionally omitted events", () => {
+    const events = buildSequence("insecure");
+    expect(nextStepIndex(events, 8)).toBe(11);
+    expect(previousStepIndex(events, 11)).toBe(8);
+    expect(nextStepIndex(events, 12)).toBe(2);
   });
 });
