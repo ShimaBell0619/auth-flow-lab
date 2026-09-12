@@ -1,13 +1,18 @@
 import { expect, test, type Page } from "@playwright/test";
 
+const authorizationInteractionActions = [
+  "認可要求を送る",
+  "ログイン画面をBrowserへ返す",
+  "ログイン・同意を操作する",
+  "認証・同意を送信する",
+  "Authorization Codeを返す",
+] as const;
+
 const advanceSafeFlowToAttackerResult = async (page: Page) => {
   for (const name of [
     "code_verifier を生成する",
     "S256 challenge を作る",
-    "認可要求を送る",
-    "ログイン画面を返す",
-    "認証・同意する",
-    "Authorization Codeを返す",
+    ...authorizationInteractionActions,
     "Codeを横取りしてみる",
     "盗んだCodeで交換を試す",
   ]) {
@@ -26,11 +31,13 @@ test("Story, Protocol, and Wire deepen the same selected message", async ({ page
   await expect(page.getByText(/high_entropy_random/)).toBeVisible();
 });
 
-test("safe sequence shows the intercepted-code rejection and return traffic", async ({ page }) => {
+test("safe sequence shows browser-mediated authorization and explicit return traffic", async ({ page }) => {
   await page.goto("/");
   const inspector = page.getByLabel("選択中の通信の説明");
 
   await expect(page.getByText("推奨フロー · PKCE ON")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Login \/ Consent UI/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Authentication \/ Consent submission/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /302 · Authorization Code/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /200 · protected resource/ })).toBeVisible();
 
@@ -50,12 +57,9 @@ test("Break it keeps the same diagram but skips PKCE-only rows and routes the to
   await expect(page.getByRole("button", { name: /SKIP · code_verifier/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /SKIP · S256/ })).toBeVisible();
 
-  await page.getByRole("button", { name: "Authorization Request · NO PKCE" }).click();
+  await page.getByRole("button", { name: "GET /authorize · NO PKCE" }).click();
   for (const name of [
-    "認可要求を送る",
-    "ログイン画面を返す",
-    "認証・同意する",
-    "Authorization Codeを返す",
+    ...authorizationInteractionActions,
     "Codeを横取りしてみる",
     "盗んだCodeで交換を試す",
   ]) {
