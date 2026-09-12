@@ -1,6 +1,6 @@
 # Auth Flow Lab — Agent Instructions
 
-Foundation-Version: 0.8.1
+Foundation-Version: 0.9.0
 
 ## Read order
 
@@ -30,7 +30,7 @@ Matching routes are additive. Do not create empty documents merely to fill a rou
 
 ## Implementation method
 
-- Use the Foundation v0.8.1 context-routed Chat implementation method for material work: Repository Context Packet (session-local only), Design Intent, Implementation Map, coherent write batch, focused/full validation, self-review, correction, re-review, final validation.
+- Use the Foundation v0.9.0 context-routed Chat implementation method for material work: Repository Context Packet (session-local only), Design Intent, Implementation Map, coherent write batch, focused/full validation, self-review, correction, re-review, final validation.
 - Issue-driven development is the default. Use a short-lived feature branch from the observed base SHA and Conventional Commit-style PR titles.
 - Prefer the smallest coherent implementation. Do not add a generic scenario engine, global state library, router, backend, persistence, or abstraction solely for hypothetical future lessons.
 - New product behavior, real authentication/authorization, external transmission/integration, persistence, recurring-cost services, public identity/URL changes, or material platform/deployment changes require explicit product-owner approval.
