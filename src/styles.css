@@ -120,7 +120,6 @@ button:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
   opacity: 0.62;
 }
 .completed-trail.is-interaction { stroke-dasharray: 5 7; }
-#arrow-trail path { fill: #b8c0cc; }
 
 .active-route {
   fill: none;
@@ -137,6 +136,7 @@ button:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
 .arrow-marker.tone-challenge path { fill: var(--challenge); }
 .arrow-marker.tone-interaction path { fill: var(--interaction); }
 .arrow-marker.tone-success path { fill: var(--success); }
+#arrow-trail path { fill: #b8c0cc; }
 
 .packet-halo { opacity: 0.18; }
 .packet-core { filter: drop-shadow(0 0 7px currentColor); }
