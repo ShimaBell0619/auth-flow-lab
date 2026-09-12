@@ -22,6 +22,7 @@ interface RouteGeometry {
 const STAGE_WIDTH = 1000;
 const STAGE_HEIGHT = 520;
 const PACKET_TRAVEL_MS = 1900;
+const ACTOR_ROUTE_RADIUS = 54;
 
 const actorPositions: Record<ActorId, Point> = {
   user: { x: 88, y: 380 },
@@ -61,20 +62,34 @@ const bubbleNudges: Record<string, Point> = {
 const markerForTone = (tone: EventTone) => `url(#arrow-${tone})`;
 
 const getRouteGeometry = (event: FlowEvent): RouteGeometry => {
-  const start = actorPositions[event.from];
-  const end = actorPositions[event.to];
+  const sourceCenter = actorPositions[event.from];
+  const targetCenter = actorPositions[event.to];
   const nudge = bubbleNudges[event.id] ?? { x: 0, y: 0 };
 
   if (event.from === event.to) {
     const loopHeight = event.id === "verifier-check" ? 92 : 86;
-    const path = `M ${start.x} ${start.y} C ${start.x - 78} ${start.y - loopHeight}, ${start.x + 78} ${start.y - loopHeight}, ${start.x} ${start.y}`;
+    const base = { x: sourceCenter.x, y: sourceCenter.y - ACTOR_ROUTE_RADIUS };
+    const path = `M ${base.x} ${base.y} C ${base.x - 72} ${base.y - loopHeight}, ${base.x + 72} ${base.y - loopHeight}, ${base.x} ${base.y}`;
     return {
       path,
-      bubble: { x: start.x + nudge.x, y: start.y - loopHeight - 34 + nudge.y },
-      rest: { x: start.x, y: start.y - loopHeight * 0.72 },
+      bubble: { x: base.x + nudge.x, y: base.y - loopHeight - 28 + nudge.y },
+      rest: { x: base.x, y: base.y - loopHeight * 0.72 },
     };
   }
 
+  const centerDx = targetCenter.x - sourceCenter.x;
+  const centerDy = targetCenter.y - sourceCenter.y;
+  const centerLength = Math.max(Math.hypot(centerDx, centerDy), 1);
+  const unitX = centerDx / centerLength;
+  const unitY = centerDy / centerLength;
+  const start = {
+    x: sourceCenter.x + unitX * ACTOR_ROUTE_RADIUS,
+    y: sourceCenter.y + unitY * ACTOR_ROUTE_RADIUS,
+  };
+  const end = {
+    x: targetCenter.x - unitX * ACTOR_ROUTE_RADIUS,
+    y: targetCenter.y - unitY * ACTOR_ROUTE_RADIUS,
+  };
   const dx = end.x - start.x;
   const dy = end.y - start.y;
   const length = Math.max(Math.hypot(dx, dy), 1);
@@ -254,28 +269,33 @@ function ProtocolStage({ activeIndex, reducedMotion }: { activeIndex: number; re
           );
         })}
 
-        <path
-          d={activeRoute.path}
-          className={`active-route tone-${activeEvent.tone} ${activeEvent.kind === "interaction" ? "is-interaction" : ""}`}
-          markerEnd={markerForTone(activeEvent.tone)}
-          vectorEffect="non-scaling-stroke"
-        />
+        <g key={`active-${activeEvent.id}`}>
+          <path
+            d={activeRoute.path}
+            className={`active-route tone-${activeEvent.tone} ${activeEvent.kind === "interaction" ? "is-interaction" : ""}`}
+            markerEnd={markerForTone(activeEvent.tone)}
+            vectorEffect="non-scaling-stroke"
+            data-from={activeEvent.from}
+            data-to={activeEvent.to}
+            data-testid="active-route"
+          />
 
-        {reducedMotion ? (
-          <g data-testid="active-packet-static">
-            <circle cx={activeRoute.rest.x} cy={activeRoute.rest.y} r="13" className={`packet-halo tone-${activeEvent.tone}`} />
-            <circle cx={activeRoute.rest.x} cy={activeRoute.rest.y} r="5.5" className={`packet-core tone-${activeEvent.tone}`} />
-          </g>
-        ) : (
-          <g key={activeEvent.id} data-testid="active-packet">
-            <circle r="15" className={`packet-halo tone-${activeEvent.tone}`}>
-              <animateMotion path={activeRoute.path} dur={`${PACKET_TRAVEL_MS}ms`} fill="freeze" />
-            </circle>
-            <circle r="5.5" className={`packet-core tone-${activeEvent.tone}`}>
-              <animateMotion path={activeRoute.path} dur={`${PACKET_TRAVEL_MS}ms`} fill="freeze" />
-            </circle>
-          </g>
-        )}
+          {reducedMotion ? (
+            <g data-testid="active-packet-static">
+              <circle cx={activeRoute.rest.x} cy={activeRoute.rest.y} r="13" className={`packet-halo tone-${activeEvent.tone}`} />
+              <circle cx={activeRoute.rest.x} cy={activeRoute.rest.y} r="5.5" className={`packet-core tone-${activeEvent.tone}`} />
+            </g>
+          ) : (
+            <g data-testid="active-packet">
+              <circle r="15" className={`packet-halo tone-${activeEvent.tone}`}>
+                <animateMotion path={activeRoute.path} dur={`${PACKET_TRAVEL_MS}ms`} fill="freeze" />
+              </circle>
+              <circle r="5.5" className={`packet-core tone-${activeEvent.tone}`}>
+                <animateMotion path={activeRoute.path} dur={`${PACKET_TRAVEL_MS}ms`} fill="freeze" />
+              </circle>
+            </g>
+          )}
+        </g>
       </svg>
 
       <div className="actor-layer">
