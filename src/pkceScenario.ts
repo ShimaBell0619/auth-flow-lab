@@ -78,10 +78,10 @@ const safeEvents: readonly SequenceEvent[] = [
     from: "client",
     to: "auth",
     kind: "request",
-    label: "Authorization Request",
+    label: "GET /authorize + code_challenge",
     storyTitle: "Browser / Appが、認可を始めてもらう",
     storyBody:
-      "Browser / Appは認可サーバーへ移動し、さきほど作った“秘密の指紋”も一緒に渡します。秘密の原本はまだ手元です。",
+      "Browser / AppはAuthorization Endpointへ移動し、さきほど作った“秘密の指紋”も一緒に渡します。秘密の原本はまだ手元です。",
     protocolTitle: "Authorization Request + PKCE challenge",
     protocolBody:
       "Authorization Endpointへ response_type=code と code_challenge / S256 を含む認可要求を送ります。",
@@ -95,36 +95,60 @@ const safeEvents: readonly SequenceEvent[] = [
     action: "認可要求を送る",
   },
   {
-    id: "login-prompt",
+    id: "login-ui",
     phase: "AUTHENTICATION",
     from: "auth",
-    to: "user",
+    to: "client",
     kind: "response",
     label: "Login / Consent UI",
-    storyTitle: "認可サーバーが、本人確認と同意を求める",
+    storyTitle: "認可サーバーのログイン画面がBrowserへ返る",
     storyBody:
-      "ここでユーザーがログインし、アプリに許可する範囲を確認します。OAuthの認可フローの中で、ユーザー操作が挟まる部分です。",
-    protocolTitle: "Authorization Server interacts with the Resource Owner",
+      "ユーザーへ直接ネットワーク通信するのではなく、Authorization Serverのログイン・同意画面がBrowserへ返り、Browser上で表示されます。",
+    protocolTitle: "Authorization Server returns the authentication interaction to the user-agent",
     protocolBody:
-      "Authorization EndpointはResource Ownerを認証し、必要な認可判断を取得します。具体的な認証方式はOAuth自体の範囲外です。",
-    wire: ["HTTP 200 · login / consent interaction", "// authentication mechanism is deployment-specific"],
-    action: "ログイン画面を返す",
+      "OAuthはユーザー認証の具体方式を規定しません。この教材では、Authorization Endpointとのブラウザ上の認証・同意インタラクションとして表します。",
+    wire: [
+      "HTTP/1.1 200 OK",
+      "Content-Type: text/html",
+      "<login / consent interaction>",
+    ],
+    action: "ログイン画面をBrowserへ返す",
   },
   {
-    id: "consent",
+    id: "user-interaction",
     phase: "AUTHENTICATION",
     from: "user",
+    to: "client",
+    kind: "local",
+    label: "User interaction · Login / Consent",
+    storyTitle: "ユーザーがBrowser上でログイン・同意を操作する",
+    storyBody:
+      "ユーザーはBrowserに表示されたAuthorization Serverの画面を操作します。ここは“人の操作”であり、まだBrowserからサーバーへの戻り通信とは分けて見ます。",
+    protocolTitle: "Resource Owner interacts through the user-agent",
+    protocolBody:
+      "Resource Ownerの認証・認可操作をUser-Agent上のインタラクションとして表しています。具体的な資格情報や認証方式はこの教材では扱いません。",
+    wire: ["// user interaction in the browser", "authenticate + approve requested access"],
+    action: "ログイン・同意を操作する",
+  },
+  {
+    id: "login-submit",
+    phase: "AUTHENTICATION",
+    from: "client",
     to: "auth",
     kind: "request",
-    label: "Authenticate + Consent",
-    storyTitle: "ユーザーが本人確認し、アクセスを許可する",
+    label: "Authentication / Consent submission",
+    storyTitle: "Browserから認可サーバーへ、認証・同意の結果を返す",
     storyBody:
-      "ユーザーの操作が認可サーバーへ戻ります。ここで認可サーバーは、Authorization Codeを発行できる状態になります。",
-    protocolTitle: "Resource Owner authorization completes",
+      "ユーザー操作の結果がBrowserからAuthorization Serverへ戻ります。ここがログイン画面の“戻りの通信”です。",
+    protocolTitle: "User-agent submits the authorization-server interaction",
     protocolBody:
-      "認可サーバー側で認証と認可判断が完了し、登録済みredirect_uriへAuthorization Responseを返す準備が整います。",
-    wire: ["POST /login-or-consent", "result = authenticated + authorized"],
-    action: "認証・同意する",
+      "Authorization Server側で認証と認可判断を完了させるためのブラウザ通信を、代表的な往復として表示しています。OAuthはこの認証プロトコル自体を規定しません。",
+    wire: [
+      "POST /authorization-interaction",
+      "result = authenticated + authorized",
+      "// representative only; authentication method is deployment-specific",
+    ],
+    action: "認証・同意を送信する",
   },
   {
     id: "code-return",
@@ -135,7 +159,7 @@ const safeEvents: readonly SequenceEvent[] = [
     label: "302 · Authorization Code",
     storyTitle: "一度限りの“引換券”がBrowser / Appへ戻る",
     storyBody:
-      "Authorization CodeはAccess Tokenではありません。次にToken Endpointで交換するための短命な引換券です。",
+      "認証と同意が完了すると、Authorization Codeが登録済みredirect_uriへ返ります。これはAccess Tokenではありません。",
     protocolTitle: "Authorization Response returns an authorization code",
     protocolBody:
       "Authorization Serverはcode_challengeとの関連を保持したAuthorization Codeをredirect_uriへ返します。",
@@ -154,7 +178,7 @@ const safeEvents: readonly SequenceEvent[] = [
     label: "AUTH_CODE intercepted",
     storyTitle: "ここで攻撃者がAuthorization Codeだけを横取りしたら？",
     storyBody:
-      "この教材では、redirectやアプリ切替の途中でCodeだけが漏れた状況を単純化して再現します。攻撃者はcode_verifierを知りません。",
+      "この教材ではredirectの途中でCodeだけが漏れた状況を単純化して再現します。攻撃者はcode_verifierを知りません。",
     protocolTitle: "Simulated authorization-code interception",
     protocolBody:
       "攻撃者がAUTH_CODEを取得したと仮定します。PKCEが有効な場合、Authorization Request時のcode_challengeに対応するcode_verifierは取得できていません。",
@@ -298,7 +322,7 @@ export const buildSequence = (mode: FlowMode): readonly SequenceEvent[] => {
     if (event.id === "authorize") {
       return {
         ...event,
-        label: "Authorization Request · NO PKCE",
+        label: "GET /authorize · NO PKCE",
         storyTitle: "比較のため、PKCEなしで認可を開始する",
         storyBody:
           "この危険な比較ではcode_challengeを送らずにAuthorization Codeを発行させたものとして流れを続けます。",
@@ -332,7 +356,11 @@ export const buildSequence = (mode: FlowMode): readonly SequenceEvent[] => {
         protocolTitle: "Attacker submits the intercepted code without PKCE",
         protocolBody:
           "この単純化した比較ではPKCE bindingがないAuthorization Codeを攻撃者が先にToken Endpointへ提示します。",
-        wire: ["POST /token", "grant_type=authorization_code&code=AUTH_CODE", "// no PKCE verifier required in this experiment"],
+        wire: [
+          "POST /token",
+          "grant_type=authorization_code&code=AUTH_CODE",
+          "// no PKCE verifier required in this experiment",
+        ],
       };
     }
     if (event.id === "attacker-result") {
@@ -346,7 +374,11 @@ export const buildSequence = (mode: FlowMode): readonly SequenceEvent[] => {
         protocolTitle: "Insecure comparison: attacker receives an access token",
         protocolBody:
           "PKCEを意図的に無効化した教材上の比較結果です。実システムへの攻撃手順を示すものではありません。",
-        wire: ["HTTP/1.1 200 OK", "{ \"access_token\": \"STOLEN_ACCESS_TOKEN\" }", "// intentionally insecure simulation"],
+        wire: [
+          "HTTP/1.1 200 OK",
+          "{ \"access_token\": \"STOLEN_ACCESS_TOKEN\" }",
+          "// intentionally insecure simulation",
+        ],
         action: "攻撃者のAPIアクセスを見る",
       };
     }
@@ -383,7 +415,11 @@ export const buildSequence = (mode: FlowMode): readonly SequenceEvent[] => {
         protocolTitle: "Insecure experiment completes",
         protocolBody:
           "Resource Serverが提示されたTokenを有効と判断したという単純化した教材結果です。",
-        wire: ["HTTP/1.1 200 OK", "{ \"resource\": \"protected data\" }", "// intentionally insecure simulation"],
+        wire: [
+          "HTTP/1.1 200 OK",
+          "{ \"resource\": \"protected data\" }",
+          "// intentionally insecure simulation",
+        ],
         action: "最初から比較する",
       };
     }
