@@ -4,13 +4,23 @@ import { actors, flowEvents, nextFlowIndex } from "./pkceScenario";
 describe("PKCE normal-flow model", () => {
   it("keeps one normal flow with five stable actors and no attacker branch", () => {
     expect(actors.map((actor) => actor.id)).toEqual(["user", "client", "auth", "token", "api"]);
-    expect(flowEvents).toHaveLength(12);
+    expect(flowEvents).toHaveLength(13);
     expect(flowEvents.some((event) => event.id.includes("attacker"))).toBe(false);
   });
 
+  it("starts from scenario-level user intent before PKCE preparation", () => {
+    expect(flowEvents[0]).toMatchObject({
+      id: "initiate",
+      from: "user",
+      to: "client",
+      kind: "interaction",
+      packetLabel: "USER ACTION",
+    });
+    expect(flowEvents[1]).toMatchObject({ id: "verifier", from: "client", to: "client", kind: "local" });
+    expect(flowEvents[2]).toMatchObject({ id: "challenge", from: "client", to: "client", kind: "local" });
+  });
+
   it("separates local PKCE work, human interaction, requests, and return traffic", () => {
-    expect(flowEvents[0]).toMatchObject({ id: "verifier", from: "client", to: "client", kind: "local" });
-    expect(flowEvents[1]).toMatchObject({ id: "challenge", from: "client", to: "client", kind: "local" });
     expect(flowEvents.find((event) => event.id === "user-interaction")).toMatchObject({
       from: "user",
       to: "client",

@@ -4,7 +4,7 @@
 
 `auth-flow-lab` makes authentication and authorization protocols understandable by turning invisible exchanges into an interactive spatial experience. The learner should be able to follow *what moves, between whom, and in what order* without translating a dense sequence diagram and a separate explanation panel in parallel.
 
-The first supported lesson is OAuth 2.0 Authorization Code with PKCE. The current slice focuses on the **normal protected flow**: local `code_verifier` / `code_challenge` preparation, browser-mediated authorization, Authorization Code return, Token exchange, and Protected API access.
+The first supported lesson is OAuth 2.0 Authorization Code with PKCE. The current slice focuses on the **normal protected flow**: a scenario-level user action that starts sign-in, local `code_verifier` / `code_challenge` preparation, browser-mediated authorization, Authorization Code return, Token exchange, and Protected API access.
 
 Failure and attack comparisons remain useful future lessons, but they are deliberately deferred until the normal flow is visually clear on its own.
 
@@ -14,7 +14,9 @@ Primary users are engineers and learners who have seen OAuth/OIDC terminology bu
 
 Their primary jobs are:
 
+- see what user intent causes the authorization flow to start before protocol-specific PKCE work appears;
 - see who sends what to whom without cross-reading a separate sequence diagram and prose panel;
+- distinguish the client device, Authorization Server, and Resource Server responsibility boundaries;
 - distinguish local PKCE preparation, human browser interaction, network requests, redirects, and responses;
 - watch one normal flow play through once, then jump directly to any communication from a compact timeline;
 - leave with a spatial mental model that can later be mapped to normative specifications and real implementations.
@@ -22,7 +24,10 @@ Their primary jobs are:
 ## 3. Core behaviors
 
 - Open directly into the current learning scene; do not require a dashboard or course catalog before learning starts.
+- Start the lesson with a concise `User → Browser/App` sign-in initiation event before `code_verifier` generation. This is scenario context, not an OAuth protocol message.
 - Use one dominant desktop protocol stage with fixed actor positions and visible message travel.
+- Make high-level placement legible with visually secondary boundaries: Browser/App inside a Client Device; Authorization and Token Endpoint inside an Authorization Server; Protected API inside a Resource Server; User outside those system boundaries.
+- Treat those boundaries as pedagogical protocol/responsibility grouping rather than a guarantee about physical host count or deployment topology.
 - Auto-play the normal flow once on initial load. Selecting a timeline step pauses automatic progression and makes that step the current event.
 - Represent the current event with a moving packet/pulse and a concise in-stage bubble. Do not require a separate inspector to understand the current event.
 - Keep completed communication as subtle directional trails so the learner retains context without turning the stage into a dense static diagram.
@@ -52,10 +57,11 @@ Their primary jobs are:
 A learning flow is supported only when:
 
 - its protocol claims have been checked against authoritative specifications or primary vendor documentation;
+- scenario-only context is visibly distinguishable from normative protocol exchange;
 - core state transitions have focused automated tests;
 - the rendered interaction has been reviewed at approximately 1440px, 390px, and 320px widths;
 - keyboard/focus and reduced-motion behavior have been checked for affected interactions;
-- visual simplification does not imply false network boundaries, for example by presenting human interaction as direct server-to-human network traffic.
+- visual simplification does not imply false network boundaries, for example by presenting human interaction as direct server-to-human network traffic or pedagogical grouping as mandatory physical deployment topology.
 
 ## 7. Evolution rules
 

@@ -19,44 +19,68 @@ interface RouteGeometry {
   rest: Point;
 }
 
+interface SystemBoundary {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 const STAGE_WIDTH = 1000;
 const STAGE_HEIGHT = 520;
 const PACKET_TRAVEL_MS = 1900;
 const ACTOR_ROUTE_RADIUS = 54;
 
 const actorPositions: Record<ActorId, Point> = {
-  user: { x: 92, y: 310 },
-  client: { x: 296, y: 310 },
-  auth: { x: 500, y: 310 },
-  token: { x: 704, y: 310 },
-  api: { x: 908, y: 310 },
+  user: { x: 92, y: 335 },
+  client: { x: 296, y: 335 },
+  auth: { x: 500, y: 335 },
+  token: { x: 704, y: 335 },
+  api: { x: 908, y: 335 },
 };
 
+const systemBoundaries: readonly SystemBoundary[] = [
+  { id: "client-device", label: "CLIENT DEVICE", x: 190, y: 220, width: 210, height: 235 },
+  {
+    id: "authorization-server",
+    label: "AUTHORIZATION SERVER",
+    x: 410,
+    y: 220,
+    width: 390,
+    height: 235,
+  },
+  { id: "resource-server", label: "RESOURCE SERVER", x: 820, y: 220, width: 165, height: 235 },
+];
+
 const routeBends: Record<string, number> = {
+  initiate: -160,
   authorize: -110,
   "login-ui": -110,
-  "user-interaction": -110,
-  "login-submit": 170,
-  "code-return": 170,
-  "token-request": 250,
-  "token-return": 250,
-  "api-request": -300,
-  "api-response": -300,
+  "user-interaction": 130,
+  "login-submit": 150,
+  "code-return": 150,
+  "token-request": 170,
+  "token-return": 170,
+  "api-request": -200,
+  "api-response": -200,
 };
 
 const bubbleNudges: Record<string, Point> = {
+  initiate: { x: -34, y: -48 },
   verifier: { x: -58, y: 0 },
   challenge: { x: 64, y: 0 },
-  authorize: { x: 0, y: -50 },
-  "login-ui": { x: 0, y: 62 },
-  "user-interaction": { x: 0, y: -60 },
-  "login-submit": { x: 0, y: 64 },
-  "code-return": { x: 0, y: -62 },
-  "token-request": { x: 0, y: 58 },
+  authorize: { x: -10, y: -66 },
+  "login-ui": { x: 0, y: 34 },
+  "user-interaction": { x: 0, y: 34 },
+  "login-submit": { x: 12, y: 28 },
+  "code-return": { x: 16, y: -44 },
+  "token-request": { x: 0, y: 12 },
   "verifier-check": { x: 0, y: 0 },
-  "token-return": { x: 0, y: -58 },
-  "api-request": { x: 0, y: -38 },
-  "api-response": { x: 0, y: 28 },
+  "token-return": { x: 0, y: -34 },
+  "api-request": { x: 12, y: -44 },
+  "api-response": { x: 18, y: 4 },
 };
 
 const markerForTone = (tone: EventTone) => `url(#arrow-${tone})`;
@@ -109,7 +133,7 @@ const getRouteGeometry = (event: FlowEvent): RouteGeometry => {
     path: `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`,
     bubble: {
       x: Math.min(910, Math.max(90, midpoint.x + nudge.x)),
-      y: Math.min(445, Math.max(72, midpoint.y + nudge.y)),
+      y: Math.min(455, Math.max(66, midpoint.y + nudge.y)),
     },
     rest: end,
   };
@@ -213,6 +237,32 @@ function ActorNode({ actor, activeEvent }: { actor: (typeof actors)[number]; act
   );
 }
 
+function SystemBoundaryLayer() {
+  return (
+    <div className="boundary-layer" aria-label="システム境界">
+      {systemBoundaries.map((boundary) => {
+        const style = {
+          left: `${(boundary.x / STAGE_WIDTH) * 100}%`,
+          top: `${(boundary.y / STAGE_HEIGHT) * 100}%`,
+          width: `${(boundary.width / STAGE_WIDTH) * 100}%`,
+          height: `${(boundary.height / STAGE_HEIGHT) * 100}%`,
+        } satisfies CSSProperties;
+
+        return (
+          <div
+            key={boundary.id}
+            className={`system-boundary boundary-${boundary.id}`}
+            style={style}
+            data-testid="system-boundary"
+          >
+            <span>{boundary.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ProtocolStage({ activeIndex, reducedMotion }: { activeIndex: number; reducedMotion: boolean }) {
   const activeEvent = flowEvents[activeIndex] ?? flowEvents[0];
   const activeRoute = getRouteGeometry(activeEvent);
@@ -228,6 +278,8 @@ function ProtocolStage({ activeIndex, reducedMotion }: { activeIndex: number; re
       data-step={activeEvent.id}
       data-motion={reducedMotion ? "reduced" : "full"}
     >
+      <SystemBoundaryLayer />
+
       <svg
         className="route-layer"
         viewBox={`0 0 ${STAGE_WIDTH} ${STAGE_HEIGHT}`}
