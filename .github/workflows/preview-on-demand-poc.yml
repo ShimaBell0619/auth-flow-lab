@@ -50,7 +50,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: true
 
-      - name: Push synthetic Preview branch
+      - name: Push content-identical synthetic Preview commit
         shell: bash
         env:
           HEAD_SHA: ${{ steps.request.outputs.head_sha }}
@@ -59,31 +59,41 @@ jobs:
           set -euo pipefail
 
           git fetch --no-tags origin "$HEAD_SHA"
+          source_tree="$(git rev-parse "$HEAD_SHA^{tree}")"
+
+          export GIT_AUTHOR_NAME='On-demand Preview PoC'
+          export GIT_AUTHOR_EMAIL='112917105+ShimaBell0619@users.noreply.github.com'
+          export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
+          export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
+
+          synthetic_sha="$(printf 'On-demand Preview for PR #%s\n\nSource-PR-HEAD: %s\n' "$PR_NUMBER" "$HEAD_SHA" | git commit-tree "$source_tree" -p "$HEAD_SHA")"
+          synthetic_tree="$(git rev-parse "$synthetic_sha^{tree}")"
+          synthetic_parent="$(git rev-parse "$synthetic_sha^")"
+
+          [[ "$synthetic_tree" == "$source_tree" ]]
+          [[ "$synthetic_parent" == "$HEAD_SHA" ]]
+          git diff --quiet "$HEAD_SHA" "$synthetic_sha"
+
           expected="$(git ls-remote --heads origin "refs/heads/$PREVIEW_BRANCH" | awk '{print $1}')"
-
-          if [[ "$expected" == "$HEAD_SHA" ]]; then
-            # The first PoC used the REST refs API and already created this exact ref.
-            # Delete/recreate it once through Git so this run proves the push-webhook path.
-            git push origin --delete "$PREVIEW_BRANCH"
-            expected=''
-          fi
-
           if [[ -n "$expected" ]]; then
             git push origin \
-              "$HEAD_SHA:refs/heads/$PREVIEW_BRANCH" \
+              "$synthetic_sha:refs/heads/$PREVIEW_BRANCH" \
               "--force-with-lease=refs/heads/$PREVIEW_BRANCH:$expected"
           else
-            git push origin "$HEAD_SHA:refs/heads/$PREVIEW_BRANCH"
+            git push origin "$synthetic_sha:refs/heads/$PREVIEW_BRANCH"
           fi
 
           verified="$(git ls-remote --heads origin "refs/heads/$PREVIEW_BRANCH" | awk '{print $1}')"
-          [[ "$verified" == "$HEAD_SHA" ]]
+          [[ "$verified" == "$synthetic_sha" ]]
 
           {
             echo '## On-demand Preview PoC'
             echo
             echo "- PR: #$PR_NUMBER"
+            echo "- Source PR HEAD: \`$HEAD_SHA\`"
+            echo "- Source tree: \`$source_tree\`"
             echo "- Synthetic branch: \`$PREVIEW_BRANCH\`"
-            echo "- Source SHA: \`$HEAD_SHA\`"
-            echo '- Ref moved through Git push; Vercel Git Integration owns deployment.'
+            echo "- Synthetic commit: \`$synthetic_sha\`"
+            echo '- Synthetic commit has the exact same tree as the PR HEAD and names that HEAD as its parent.'
+            echo '- Vercel Git Integration owns deployment; no Vercel credential is used by this workflow.'
           } >> "$GITHUB_STEP_SUMMARY"
