@@ -1,13 +1,20 @@
 import { expect, test } from "@playwright/test";
 
-test("renders one white animated protocol stage without the old inspector controls", async ({ page }) => {
+test("starts from user intent and shows system boundaries on a white stage", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
+  await page.getByRole("button", { name: "Step 1: Start" }).click();
 
   const stage = page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" });
   await expect(stage).toBeVisible();
-  await expect(page.getByRole("button", { name: "Story" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /Break it/ })).toHaveCount(0);
-  await expect(page.getByLabel("選択中の通信の説明")).toHaveCount(0);
+  await expect(stage).toHaveAttribute("data-step", "initiate");
+  await expect(page.getByTestId("flow-bubble")).toContainText("サインインを開始");
+  await expect(page.getByTestId("active-route")).toHaveAttribute("data-from", "user");
+  await expect(page.getByTestId("active-route")).toHaveAttribute("data-to", "client");
+  await expect(page.getByTestId("system-boundary")).toHaveCount(3);
+  await expect(page.getByText("CLIENT DEVICE", { exact: true })).toBeVisible();
+  await expect(page.getByText("AUTHORIZATION SERVER", { exact: true })).toBeVisible();
+  await expect(page.getByText("RESOURCE SERVER", { exact: true })).toBeVisible();
 
   const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   const stageBackground = await stage.evaluate((element) => {
@@ -20,22 +27,29 @@ test("renders one white animated protocol stage without the old inspector contro
   expect(stageBackground.image).toBe("none");
 });
 
+test("old inspector controls stay absent", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Story" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Break it/ })).toHaveCount(0);
+  await expect(page.getByLabel("選択中の通信の説明")).toHaveCount(0);
+});
+
 test("timeline selection shows the chosen event in the stage and leaves completed trails", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Step 7: Code" }).click();
+  await page.getByRole("button", { name: "Step 8: Code" }).click();
 
   const stage = page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" });
   await expect(stage).toHaveAttribute("data-step", "code-return");
   await expect(page.getByTestId("flow-bubble")).toContainText("Authorization Code を返す");
   await expect(page.getByTestId("flow-bubble")).toContainText("302 · AUTH_CODE");
-  expect(await page.getByTestId("completed-trail").count()).toBe(6);
+  expect(await page.getByTestId("completed-trail").count()).toBe(7);
 });
 
 test("full-motion mode contains an SVG packet motion for the active route", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
-  await page.getByRole("button", { name: "Step 8: Token Req" }).click();
+  await page.getByRole("button", { name: "Step 9: Token Req" }).click();
 
   const stage = page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" });
   await expect(stage).toHaveAttribute("data-motion", "full");
@@ -46,7 +60,7 @@ test("full-motion mode contains an SVG packet motion for the active route", asyn
 test("reduced-motion mode preserves the selected route without packet travel", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.getByRole("button", { name: "Step 10: Token" }).click();
+  await page.getByRole("button", { name: "Step 11: Token" }).click();
 
   const stage = page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" });
   const activeRoute = page.getByTestId("active-route");
@@ -62,11 +76,11 @@ test("reduced-motion mode preserves the selected route without packet travel", a
 test("timeline steps are keyboard reachable in a logical sequence", async ({ page }) => {
   await page.goto("/");
 
-  const first = page.getByRole("button", { name: "Step 1: Verifier" });
+  const first = page.getByRole("button", { name: "Step 1: Start" });
   await first.focus();
   await expect(first).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Step 2: Challenge" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Step 2: Verifier" })).toBeFocused();
 });
 
 test("narrow layouts keep the wide stage inside its own scroll surface", async ({ page }) => {

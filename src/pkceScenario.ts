@@ -30,6 +30,17 @@ export const actors = [
 
 export const flowEvents = [
   {
+    id: "initiate",
+    phase: "SCENARIO START",
+    from: "user",
+    to: "client",
+    kind: "interaction",
+    tone: "interaction",
+    packetLabel: "USER ACTION",
+    bubble: "サインインを開始",
+    timelineLabel: "Start",
+  },
+  {
     id: "verifier",
     phase: "PKCE PREP",
     from: "client",

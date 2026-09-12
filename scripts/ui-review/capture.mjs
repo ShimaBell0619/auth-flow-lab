@@ -11,9 +11,10 @@ const views = [
 ];
 
 const desktopStates = [
-  { name: "desktop-code-return-1440", step: "Step 7: Code" },
-  { name: "desktop-token-return-1440", step: "Step 10: Token" },
-  { name: "desktop-api-response-1440", step: "Step 12: Response" },
+  { name: "desktop-verifier-1440", step: "Step 2: Verifier" },
+  { name: "desktop-code-return-1440", step: "Step 8: Code" },
+  { name: "desktop-token-return-1440", step: "Step 11: Token" },
+  { name: "desktop-api-response-1440", step: "Step 13: Response" },
 ];
 
 await mkdir(output, { recursive: true });
@@ -26,6 +27,8 @@ try {
       reducedMotion: "reduce",
     });
     await page.goto(baseURL, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Step 1: Start" }).click();
+    await page.waitForTimeout(150);
     await page.screenshot({
       path: `${output}/${view.name}.png`,
       fullPage: true,
