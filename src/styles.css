@@ -103,7 +103,7 @@ button:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
 .system-boundary > span {
   position: absolute;
   top: 12px;
-  left: 14px;
+  right: 14px;
   color: #98a2b3;
   background: #fff;
   font: 800 0.56rem/1 ui-monospace, SFMono-Regular, Consolas, monospace;
