@@ -247,7 +247,7 @@ function App() {
 
           <div className="sequence-scroll">
             <div className="sequence-canvas">
-              <div className="actor-row" role="group" aria-label="通信主体">
+              <div className="actor-row">
                 <span className="actor-row-spacer" aria-hidden="true" />
                 {actors.map((actor) => <ActorHeader key={actor.id} actor={actor} />)}
               </div>
