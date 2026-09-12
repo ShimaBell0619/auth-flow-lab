@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   verify:
-    uses: ShimaBell0619/web-app-foundation/.github/workflows/web-ci.yml@f49c2b93f83771be2b5437f379e41e92d70eb323
+    uses: ShimaBell0619/web-app-foundation/.github/workflows/web-ci.yml@dc4ff0055a71c58dc43c33bcce87514d1cd79bbc
     with:
       node_version_file: .node-version
       cache_dependency_path: package-lock.json
