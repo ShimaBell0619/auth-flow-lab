@@ -1,0 +1,76 @@
+name: UI Review
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "tests/e2e/**"
+      - "scripts/ui-review/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.*"
+      - "playwright.config.*"
+      - ".node-version"
+      - ".github/workflows/ui-review.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Interaction and rendered review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout review target
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run interaction checks
+        run: npm run test:e2e
+
+      - name: Start review server
+        shell: bash
+        run: |
+          npm run dev -- --host 127.0.0.1 --port 4173 > /tmp/auth-flow-lab-vite.log 2>&1 &
+          echo $! > /tmp/auth-flow-lab-vite.pid
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/auth-flow-lab-vite.log
+          exit 1
+
+      - name: Capture rendered-review baseline
+        env:
+          UI_REVIEW_BASE_URL: http://127.0.0.1:4173/
+          UI_REVIEW_OUTPUT: /tmp/auth-flow-lab-ui-review
+        run: npm run ui:review
+
+      - name: Upload rendered-review screenshots
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: auth-flow-lab-ui-review-${{ github.run_id }}
+          path: /tmp/auth-flow-lab-ui-review/*.png
+          if-no-files-found: error
+          retention-days: 14
