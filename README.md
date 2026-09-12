@@ -42,13 +42,14 @@ npm run test:e2e
 
 ## Hosting
 
-Hosting follows the adopted Web App Foundation Vercel profile:
+Hosting follows the adopted Web App Foundation v0.9.0 Vercel profile:
 
-- PR/branch → Vercel Preview deployment;
-- `main` → Vercel Production deployment;
-- GitHub Actions → reusable quality CI and rendered UI review only.
+- ordinary feature/PR branches → no Vercel deployment; review through GitHub Actions CI and rendered UI-review artifacts;
+- explicitly selected PR HEAD → Fixed Staging through the trusted `staging` slot;
+- `staging` → the single Vercel hosted non-Production review surface;
+- `main` → Vercel Production deployment.
 
-No parallel GitHub Pages deployment path is maintained.
+`vercel.json` disables Git deployment for every branch except `main` and `staging` while preserving the Vite SPA fallback rewrite. `staging` is a mutable review slot, not release history. No parallel GitHub Pages or custom Vercel deployment path is maintained.
 
 ## Contracts
 
@@ -58,7 +59,7 @@ No parallel GitHub Pages deployment path is maintained.
 - `docs/ARCHITECTURE.md` — technical and simulation boundaries
 - `docs/FOUNDATION.md` — Web App Foundation provenance and hosting profile
 
-This consumer currently adopts `web-app-foundation` **v0.8.1** at commit `9061ea222e5e6bba1197b03088c6cb2c13f7e0c4`.
+This consumer currently adopts `web-app-foundation` **v0.9.0** at commit `f49c2b93f83771be2b5437f379e41e92d70eb323`.
 
 ## Protocol references
 
