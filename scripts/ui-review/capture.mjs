@@ -40,6 +40,7 @@ try {
   await desktop.goto(baseURL, { waitUntil: "networkidle" });
   for (const state of desktopStates) {
     await desktop.getByRole("button", { name: state.step }).click();
+    await desktop.waitForTimeout(250);
     await desktop.screenshot({
       path: `${output}/${state.name}.png`,
       fullPage: true,
