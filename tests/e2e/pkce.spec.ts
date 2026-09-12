@@ -28,20 +28,22 @@ test("Story, Protocol, and Wire deepen the same selected message", async ({ page
 
 test("safe sequence shows the intercepted-code rejection and return traffic", async ({ page }) => {
   await page.goto("/");
+  const inspector = page.getByLabel("選択中の通信の説明");
 
   await expect(page.getByText("推奨フロー · PKCE ON")).toBeVisible();
   await expect(page.getByRole("button", { name: /302 · Authorization Code/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /200 · protected resource/ })).toBeVisible();
 
   await advanceSafeFlowToAttackerResult(page);
-  await expect(page.getByText("400 · invalid_grant", { exact: true })).toBeVisible();
+  await expect(inspector.getByText("400 · invalid_grant", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Wire" }).click();
-  await expect(page.getByText(/400 Bad Request/)).toBeVisible();
+  await expect(inspector.getByText(/400 Bad Request/)).toBeVisible();
 });
 
 test("Break it keeps the same diagram but skips PKCE-only rows and routes the token to the attacker", async ({ page }) => {
   await page.goto("/");
+  const inspector = page.getByLabel("選択中の通信の説明");
   await page.getByRole("button", { name: /Break it/ }).click();
 
   await expect(page.getByText("実験モード · PKCE OFF")).toBeVisible();
@@ -60,9 +62,9 @@ test("Break it keeps the same diagram but skips PKCE-only rows and routes the to
     await page.getByRole("button", { name }).click();
   }
 
-  await expect(page.getByText("200 · stolen Access Token", { exact: true })).toBeVisible();
+  await expect(inspector.getByText("200 · stolen Access Token", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "攻撃者のAPIアクセスを見る" }).click();
-  await expect(page.getByText("GET /resource · stolen token", { exact: true })).toBeVisible();
+  await expect(inspector.getByText("GET /resource · stolen token", { exact: true })).toBeVisible();
 });
 
 test("core controls are reachable in a logical keyboard order", async ({ page }) => {
