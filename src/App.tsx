@@ -239,7 +239,7 @@ function ActorNode({ actor, activeEvent }: { actor: (typeof actors)[number]; act
 
 function SystemBoundaryLayer() {
   return (
-    <div className="boundary-layer" role="group" aria-label="システム境界">
+    <div className="boundary-layer">
       {systemBoundaries.map((boundary) => {
         const style = {
           left: `${(boundary.x / STAGE_WIDTH) * 100}%`,
