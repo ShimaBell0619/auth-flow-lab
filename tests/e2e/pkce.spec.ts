@@ -35,13 +35,17 @@ test("full-motion mode contains an SVG packet motion for the active route", asyn
   await expect(page.locator("animateMotion")).toHaveCount(2);
 });
 
-test("reduced-motion mode preserves the current route without packet travel", async ({ page }) => {
+test("reduced-motion mode preserves the selected route without packet travel", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.getByRole("button", { name: "Step 10: Token" }).click();
 
   const stage = page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" });
+  const activeRoute = page.getByTestId("active-route");
   await expect(stage).toHaveAttribute("data-motion", "reduced");
+  await expect(activeRoute).toHaveAttribute("data-from", "token");
+  await expect(activeRoute).toHaveAttribute("data-to", "client");
+  await expect(activeRoute).toHaveClass(/tone-success/);
   await expect(page.getByTestId("active-packet-static")).toBeVisible();
   await expect(page.locator("animateMotion")).toHaveCount(0);
   await expect(page.getByTestId("flow-bubble")).toContainText("Access Token を発行");
