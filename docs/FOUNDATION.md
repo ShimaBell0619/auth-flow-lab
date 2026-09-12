@@ -19,4 +19,11 @@ The repository derives its working rules from Foundation v0.8.1, including:
 - `docs/ui-review.md` for rendered review;
 - `docs/adoption.md` for consumer provenance and reusable CI.
 
+## Hosting and deployment
+
+- Hosting follows the Foundation `docs/vercel.md` profile.
+- Vercel Git Integration owns Preview deployments for branches/PRs and Production deployment from `main`.
+- GitHub Actions owns quality evidence and rendered UI review only; this repository does not maintain a parallel GitHub Pages or custom Vercel deployment workflow.
+- Vercel build/environment/domain configuration remains provider-owned unless an application requirement justifies repository configuration.
+
 Copied rules do not update automatically. Foundation upgrades must be deliberate and preserve app-specific product/design decisions unless the product owner approves a change.
