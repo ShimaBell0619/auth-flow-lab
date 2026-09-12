@@ -2,12 +2,18 @@ import { describe, expect, it } from "vitest";
 import { buildSequence, nextStepIndex, previousStepIndex } from "./pkceScenario";
 
 describe("PKCE learning sequence", () => {
-  it("shows explicit request and response directions through the safe flow", () => {
+  it("shows browser-mediated authentication plus explicit return traffic", () => {
     const events = buildSequence("safe");
+    const loginUi = events.find((event) => event.id === "login-ui");
+    const userInteraction = events.find((event) => event.id === "user-interaction");
+    const loginSubmit = events.find((event) => event.id === "login-submit");
     const codeReturn = events.find((event) => event.id === "code-return");
     const tokenReturn = events.find((event) => event.id === "token-return");
     const apiResponse = events.find((event) => event.id === "api-response");
 
+    expect(loginUi).toMatchObject({ from: "auth", to: "client", kind: "response" });
+    expect(userInteraction).toMatchObject({ from: "user", to: "client", kind: "local" });
+    expect(loginSubmit).toMatchObject({ from: "client", to: "auth", kind: "request" });
     expect(codeReturn).toMatchObject({ from: "auth", to: "client", kind: "redirect" });
     expect(tokenReturn).toMatchObject({ from: "token", to: "client", kind: "success" });
     expect(apiResponse).toMatchObject({ from: "api", to: "client", kind: "success" });
@@ -25,6 +31,7 @@ describe("PKCE learning sequence", () => {
     const safe = buildSequence("safe");
     const insecure = buildSequence("insecure");
 
+    expect(safe).toHaveLength(14);
     expect(insecure).toHaveLength(safe.length);
     expect(insecure[0]?.skipped).toBe(true);
     expect(insecure[1]?.skipped).toBe(true);
@@ -37,8 +44,8 @@ describe("PKCE learning sequence", () => {
 
   it("navigation skips intentionally omitted events", () => {
     const events = buildSequence("insecure");
-    expect(nextStepIndex(events, 8)).toBe(11);
-    expect(previousStepIndex(events, 11)).toBe(8);
-    expect(nextStepIndex(events, 12)).toBe(2);
+    expect(nextStepIndex(events, 9)).toBe(12);
+    expect(previousStepIndex(events, 12)).toBe(9);
+    expect(nextStepIndex(events, 13)).toBe(2);
   });
 });
