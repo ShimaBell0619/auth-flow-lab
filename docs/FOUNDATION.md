@@ -34,7 +34,7 @@ The repository derives its working rules from Foundation v0.9.2, including:
 
 The earlier v0.9.0/v0.9.1 suppression failure is now understood.
 
-Observed repository/provider evidence:
+Observed repository/provider evidence before the correction:
 
 - v0.9.0 bootstrap main SHA: `b2967d4056ad1fa76c62dba67702133ae90c11ea`;
 - disposable slash-containing feature smoke SHA: `b53a52d28445c97352efb87efbe9bce4a8dfa972`;
@@ -44,12 +44,14 @@ Observed repository/provider evidence:
 
 Therefore disabled Branch Tracking was not the cause in this project. Foundation v0.9.2 corrected the repository rule to slash-safe minimatch globstar `"**": false`; plain `*` does not span `/`, so common branches such as `feature/foo` and `chore/...` previously fell through to Vercel's default deployment-enabled behavior.
 
-After this v0.9.2 policy reaches `main`, adoption evidence must include the three-path smoke:
+The corrected policy was then verified against the real project:
 
-1. ordinary slash-containing feature branch push -> no Vercel deployment/status;
-2. `staging` ref movement/push -> Vercel hosted review deployment;
-3. `main` -> Vercel Production deployment.
+1. **`main` / Production** — v0.9.2 adoption merged at `b0c51796f9b56a27c1e9421b95d2df8dccc7ad3e`; main CI #47 succeeded and Vercel Production deployment completed successfully.
+2. **`staging` / hosted review** — moving `staging` from `b2967d4056ad1fa76c62dba67702133ae90c11ea` to `b0c51796f9b56a27c1e9421b95d2df8dccc7ad3e` created a distinct Vercel deployment, which completed successfully.
+3. **ordinary slash-containing branch / suppressed** — tree-identical smoke commit `98738ba9c5418442a8d33daaabc97c58dcbed54e` on `smoke/vercel-globstar-0.9.2` was checked repeatedly after push and received no Vercel commit status.
 
-The stable Vercel Branch Domain/custom domain for `staging` and GitHub repository variable `FIXED_STAGING_URL` remain external setup required by the full Fixed Staging workflow. The repository must not claim Issue #15 complete until any still-missing external setup is identified or completed.
+This proves the repository/Vercel branch-eligibility contract intended by Foundation v0.9.2: automatic hosted deployments are limited to `main` and `staging`, while ordinary slash-containing branches are suppressed.
+
+The stable Vercel Branch Domain/custom domain for `staging` and the GitHub repository variable `FIXED_STAGING_URL` are separate external Fixed Staging configuration. The connected GitHub surface does not expose repository variable values or Vercel custom-domain configuration, so those values were not independently re-verified by this smoke.
 
 Copied rules do not update automatically. Foundation upgrades must be deliberate and preserve app-specific product/design decisions unless the product owner approves a change.
