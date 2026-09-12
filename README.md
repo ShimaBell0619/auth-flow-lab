@@ -42,14 +42,16 @@ npm run test:e2e
 
 ## Hosting
 
-Hosting follows the adopted Web App Foundation v0.9.0 Vercel profile:
+Hosting follows the adopted Web App Foundation v0.9.1 Vercel profile:
 
-- ordinary feature/PR branches → no Vercel deployment; review through GitHub Actions CI and rendered UI-review artifacts;
+- ordinary feature/PR branches → no Vercel deployment after provider-side adoption is verified; review through GitHub Actions CI and rendered UI-review artifacts;
 - explicitly selected PR HEAD → Fixed Staging through the trusted `staging` slot;
 - `staging` → the single Vercel hosted non-Production review surface;
 - `main` → Vercel Production deployment.
 
-`vercel.json` disables Git deployment for every branch except `main` and `staging` while preserving the Vite SPA fallback rewrite. `staging` is a mutable review slot, not release history. No parallel GitHub Pages or custom Vercel deployment path is maintained.
+`vercel.json` records the repository policy: Git deployment is disabled for every branch except `main` and `staging`, while the Vite SPA fallback rewrite is preserved. `staging` is a mutable review slot, not release history. No parallel GitHub Pages or custom Vercel deployment path is maintained.
+
+Provider-side adoption is still being verified. A post-v0.9.0 smoke showed that an ordinary feature branch still received a Vercel deployment despite the repository policy being present on `main`. Foundation v0.9.1 therefore requires Vercel Project Preview/Production Branch Tracking inspection plus a post-adoption three-path smoke before this repository is considered fully migrated. See `docs/FOUNDATION.md` for the current evidence and remaining provider setup.
 
 ## Contracts
 
@@ -59,7 +61,7 @@ Hosting follows the adopted Web App Foundation v0.9.0 Vercel profile:
 - `docs/ARCHITECTURE.md` — technical and simulation boundaries
 - `docs/FOUNDATION.md` — Web App Foundation provenance and hosting profile
 
-This consumer currently adopts `web-app-foundation` **v0.9.0** at commit `f49c2b93f83771be2b5437f379e41e92d70eb323`.
+This consumer currently adopts `web-app-foundation` **v0.9.1** at commit `dc4ff0055a71c58dc43c33bcce87514d1cd79bbc`.
 
 ## Protocol references
 
