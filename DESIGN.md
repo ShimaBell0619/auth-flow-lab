@@ -8,100 +8,120 @@ description: Interactive protocol-learning design system for spatial authenticat
 
 ## Overview
 
-**Design direction:** a desktop-first animated sequence workspace where the learner can follow who sends what to whom, including return traffic, and deepen the exact same selected message from Story → Protocol → Wire.
+**Design direction:** a desktop-first animated protocol stage where communication is learned by watching it move between stable actors.
 
-The primary task is to understand causality across the full request/response exchange. Actor identity, message direction, current event, and response outcome dominate. Supporting explanation stays attached to the selected event instead of competing with the diagram.
+The diagram is not a conventional stacked sequence chart. Actors stay spatially fixed, the current message travels as a visible glowing packet/pulse, completed exchanges remain as faint directional trails, and one concise speech bubble appears inside the stage for the current event.
 
-The ideation concept art and the first kinetic-board mock are directional experiments only. Do not mechanically preserve either composition when they reduce protocol comprehension.
-
-Avoid generic SaaS composition: no KPI grid, marketing hero, sidebar dashboard, repeated feature cards, or decorative glass panels without a protocol/interaction reason.
+The stage itself is the explanation. Avoid a separate inspector, dense supporting prose, or a second UI model that competes with the spatial flow.
 
 ## Colors
 
-Use semantic roles implemented as CSS variables:
+Use a clean white canvas and semantic accents:
 
-- `canvas`: warm neutral lab-board background (`#f4f0e6`).
-- `ink`: primary text and structural linework (`#142033`).
-- `muted`: secondary explanation (`#667085`).
-- `surface`: elevated teaching/readout surface (`#fffdf8`).
-- `protocol`: normal request/response movement (`#315efb`).
-- `challenge`: redirect/transformed PKCE proof (`#7251d4`).
-- `success`: completed safe outcome (`#14795b`).
-- `caution`: experiment/insecure-mode warning.
-- `danger`: attacker traffic, rejection, or compromised comparison state.
+- `canvas`: pure white (`#ffffff`).
+- `ink`: primary text and structural linework (`#101828`).
+- `muted`: secondary labels (`#667085`).
+- `soft`: subtle trail/grid/support lines (`#eaecf0`).
+- `protocol`: normal network movement (`#2563eb`).
+- `challenge`: PKCE preparation and verifier/challenge semantics (`#7c3aed`).
+- `success`: successful Token/API return (`#15803d`).
+- `interaction`: human/browser interaction that must not be confused with network traffic (`#475467`).
 
-Color never carries the full meaning: direction, labels, symbols, and text must reinforce safe, blocked, skipped, experiment, and compromised states.
+Color never carries the full meaning. Packet labels, actor labels, direction, line style, and short bubble copy reinforce the state.
 
-Light appearance is the initial supported theme. Dark/system theming is deferred until the learning hierarchy is proven.
+Do not reintroduce the warm beige lab-board background.
 
 ## Typography
 
-- UI/explanation: system sans stack with Japanese-capable fallbacks; do not fetch external fonts in the initial product.
-- Protocol identifiers and wire snippets: system monospace stack.
-- Large display typography is used sparingly. Actor lanes and message labels, not a marketing headline, provide identity.
+- UI/explanation: system sans stack with Japanese-capable fallbacks; do not fetch external fonts.
+- Protocol identifiers: system monospace stack.
+- Keep copy terse. The active bubble is normally one short sentence plus an optional compact protocol identifier.
 
 ## Layout
 
-Desktop is the primary learning surface for the PKCE lesson:
+Desktop is the primary surface:
 
-1. compact product/scenario header;
-2. lesson title + persistent PKCE safety state;
-3. dominant two-column workspace: sequence canvas + event inspector;
-4. compact educational footnote.
+1. compact product + lesson header;
+2. one dominant protocol stage using most of the remaining viewport;
+3. a minimal bottom timeline.
 
-The sequence canvas uses six fixed conceptual lanes: User, Browser/App, Authorization endpoint, Token endpoint, Protected API, and simulated Attacker. Authorization and Token are shown as separate lanes to make endpoint responsibilities legible even though they are commonly part of the same Authorization Server deployment.
+There is no separate inspector column. There are no Story / Protocol / Wire mode buttons, no Break-it toggle, and no generic Next/Previous action deck in the current slice.
 
-At wide widths, use most of the viewport and target a `100dvh` experience. The sequence itself may scroll inside its bounded canvas when vertical space is limited; do not shrink actors, text, or arrows until they become illegible.
+The normal-flow stage uses five stable actors: User, Browser / App, Authorization, Token Endpoint, and Protected API. Authorization and Token remain distinct because their endpoint responsibilities are useful to learn separately.
 
-At narrow widths, desktop composition is not preserved at all costs. Keep the document width contained, let the sequence canvas scroll internally, and stack the inspector below it. Narrow layouts must remain functional but are secondary for this iteration.
+At narrow widths, preserve the desktop geometry inside a contained horizontal scroll surface rather than collapsing the actors into an unrelated mobile composition. The document itself must not overflow horizontally.
 
-## Sequence visualization
+## Protocol-stage visualization
 
-- Actor headers stay aligned with vertical lifelines.
-- Each chronological event is a selectable row.
-- Requests and responses both appear; redirects, attacker branches, rejection responses, Token responses, API requests, and API responses are not collapsed into one abstract packet.
-- The selected event is strongly emphasized; completed events remain readable; future events are de-emphasized but visible so learners can preview the whole flow.
-- PKCE OFF retains the same sequence shape. PKCE-only rows become explicit `SKIP` rows and the later Token/API route changes to the attacker. This supports direct visual comparison.
-- Self-events such as verifier/challenge generation remain on the Browser/App lifeline and are visually distinct from network traffic.
+- Actor nodes use large, simple line icons with visible names and compact roles.
+- Actor positions remain stable while the current event changes.
+- The active route is clearly emphasized and ends with a visible direction marker.
+- A glowing packet/pulse travels along the active route for network messages.
+- Local operations such as verifier creation or verifier checking use a local loop around the relevant actor.
+- Human interaction is visually distinct (for example a dotted route / hollow pulse) so it is not mistaken for a network packet.
+- Completed events remain as low-contrast directional trails. Upcoming routes are not pre-drawn.
+- Return traffic must be visible: login UI response, Authorization Code redirect, Access Token response, and API response all have their own event.
 
-## Components
+## In-stage bubble
 
-Generic controls remain semantic HTML or reviewed accessible primitives. Product meaning belongs in semantic components/concepts such as:
+Only the current event gets a prominent explanation bubble.
 
-- `SequenceWorkspace` — primary desktop learning surface;
-- `ActorLane` — icon + role + lifeline for one protocol participant;
-- `SequenceEventRow` — one chronological message or local protocol operation;
-- `EventInspector` — explanation of the exact selected event;
-- `ViewModeControl` — Story / Protocol / Wire depth control without changing diagram position;
-- `SafetyModeControl` — PKCE-safe vs intentionally insecure comparison.
+- Keep it inside the protocol stage near the active route.
+- Use approximately one short sentence / 1–2 lines.
+- A compact protocol label may accompany the sentence.
+- Do not put long explanatory paragraphs in the bubble.
+- Do not create a separate readout panel that repeats the same event.
 
-Specialist CSS/SVG is justified for lifelines, arrows, endpoint grouping, state emphasis, and responsive sequence containment. Do not rebuild standard focus, button, or keyboard behavior with bespoke interaction code.
+## Timeline
 
-## Icons
+The timeline is secondary navigation at the bottom edge.
 
-Actors require stable, simple line icons because role recognition is part of the learning task. Icons supplement labels; they never replace the actor name. Use one coherent stroke style and avoid decorative illustration or character art.
+- Use small dots plus short labels.
+- The current step is clear; completed steps are visible but quiet.
+- Each step is keyboard reachable and can be selected directly.
+- Selecting a step pauses the initial auto-play so the learner can inspect the flow manually.
+- Do not make the timeline look like a large wizard/stepper component.
 
 ## Motion
 
-Motion is functional: selection emphasis and state transitions may animate briefly, but the sequence does not need continuous decorative motion. Prefer transform/opacity and short durations. `prefers-reduced-motion: reduce` must preserve immediate state changes without travel or looping effects.
+Motion is functional and central to this lesson.
+
+- Auto-play the normal flow once on first load.
+- Use transform/SVG motion for the active packet rather than decorative looping effects.
+- Keep travel durations long enough to perceive direction but short enough to maintain flow.
+- `prefers-reduced-motion: reduce` must show the same active route, destination, bubble, and progress without travel animation.
+
+## Components
+
+Product-specific semantic concepts include:
+
+- `ProtocolStage` — dominant spatial learning surface;
+- `ActorNode` — fixed icon + actor identity;
+- `FlowTrail` — completed directional communication;
+- `ActiveRoute` / `Packet` — current communication and its motion;
+- `FlowBubble` — concise explanation attached to the current route;
+- `FlowTimeline` — minimal direct navigation.
+
+Specialist CSS/SVG is justified for route geometry, packet motion, actor placement, trails, and responsive containment. Ordinary controls remain semantic HTML.
 
 ## Do's and Don'ts
 
 ### Do
 
-- Make message direction and return traffic understandable before the learner reads explanatory prose.
-- Use most of the desktop viewport for the sequence workspace.
-- Keep Story, Protocol, and Wire attached to the same selected message.
-- Make `/authorize` and `/token` responsibilities visually distinguishable.
-- Keep insecure experiment mode persistent, explicit, and non-color-only.
-- Validate Japanese wrapping, representative protocol strings, keyboard/focus, and contained overflow at 1440px, 390px, and 320px.
+- Make movement understandable before the learner reads text.
+- Use most of the desktop viewport for the stage.
+- Keep the background white and the visual hierarchy clean.
+- Use icons and stable actor positions to build spatial memory.
+- Show request and response direction explicitly.
+- Keep current copy short and in the diagram.
+- Validate overlaps, Japanese wrapping, focus, contained overflow, and reduced motion at 1440px, 390px, and 320px.
 - Use render → critique → fix → re-render for material UI changes.
 
 ### Don't
 
-- Do not compress the desktop learning surface into a small central card.
-- Do not collapse a multi-message request/response exchange into one moving token when the missing return path changes understanding.
-- Do not make the explanation panel a separate mental model from the diagram.
-- Do not hide required protocol meaning behind hover-only affordances.
-- Do not introduce generic dashboard decoration, character art, 3D illustration, glow, or glassmorphism without a learning reason.
-- Do not present the simulated insecure outcome as a recipe for attacking a real system.
+- Do not fall back to a conventional stacked sequence diagram as the main experience.
+- Do not add a separate inspector or long explanation panel.
+- Do not add generic Next/Previous buttons for normal progression.
+- Do not reintroduce PKCE ON/OFF comparison until it is explicitly brought back into scope.
+- Do not use beige paper styling, decorative glass panels, gradients/glows unrelated to packet state, or generic dashboard composition.
+- Do not imply that human input is direct network traffic to a server.

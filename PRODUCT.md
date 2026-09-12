@@ -2,9 +2,11 @@
 
 ## 1. Purpose
 
-`auth-flow-lab` makes authentication and authorization protocols understandable by turning invisible message exchanges into an interactive, spatial learning experience. The learner should understand *why* a mechanism exists by manipulating the flow and observing both success and failure states.
+`auth-flow-lab` makes authentication and authorization protocols understandable by turning invisible exchanges into an interactive spatial experience. The learner should be able to follow *what moves, between whom, and in what order* without translating a dense sequence diagram and a separate explanation panel in parallel.
 
-The first supported lesson is OAuth 2.0 Authorization Code with PKCE, focused on code interception and the role of `code_verifier` / `code_challenge`.
+The first supported lesson is OAuth 2.0 Authorization Code with PKCE. The current slice focuses on the **normal protected flow**: local `code_verifier` / `code_challenge` preparation, browser-mediated authorization, Authorization Code return, Token exchange, and Protected API access.
+
+Failure and attack comparisons remain useful future lessons, but they are deliberately deferred until the normal flow is visually clear on its own.
 
 ## 2. Users and primary jobs
 
@@ -12,19 +14,20 @@ Primary users are engineers and learners who have seen OAuth/OIDC terminology bu
 
 Their primary jobs are:
 
-- follow who sends what to whom without repeatedly cross-reading a sequence diagram and prose;
-- switch between an intuitive explanation and protocol terminology without leaving the current scene;
-- deliberately break a protection and observe what changes;
-- leave with a mental model that can later be mapped to real specifications and implementations.
+- see who sends what to whom without cross-reading a separate sequence diagram and prose panel;
+- distinguish local PKCE preparation, human browser interaction, network requests, redirects, and responses;
+- watch one normal flow play through once, then jump directly to any communication from a compact timeline;
+- leave with a spatial mental model that can later be mapped to normative specifications and real implementations.
 
 ## 3. Core behaviors
 
 - Open directly into the current learning scene; do not require a dashboard or course catalog before learning starts.
-- Keep the main learning flow spatial and interactive. Advancing the lesson should use meaningful protocol actions rather than a generic Next-only interaction.
-- Keep analogy and protocol fact distinguishable. Friendly metaphors may explain a concept, but protocol mode must expose the real term and representative wire-level shape.
-- The PKCE lesson must demonstrate both a protected interception attempt and a deliberately insecure no-PKCE comparison.
-- The insecure comparison is a local simulation. It must be visibly marked as intentionally unsafe and must never collect credentials or perform real token exchange.
-- Resetting or switching the protection state must return the scenario to a coherent starting point.
+- Use one dominant desktop protocol stage with fixed actor positions and visible message travel.
+- Auto-play the normal flow once on initial load. Selecting a timeline step pauses automatic progression and makes that step the current event.
+- Represent the current event with a moving packet/pulse and a concise in-stage bubble. Do not require a separate inspector to understand the current event.
+- Keep completed communication as subtle directional trails so the learner retains context without turning the stage into a dense static diagram.
+- Keep the bottom timeline secondary and compact. It is navigation, not the main teaching surface.
+- Do not require generic Next/Previous controls, Story/Protocol/Wire mode buttons, or a PKCE ON/OFF toggle in the current slice.
 
 ## 4. Product constraints
 
@@ -33,12 +36,13 @@ Their primary jobs are:
 - Example tokens, codes, URLs, and verifier values are synthetic teaching data only.
 - Japanese is the primary explanatory language; standardized protocol identifiers remain in their conventional English form.
 - Keyboard navigation, visible focus, reduced-motion behavior, and text/shape reinforcement for semantic states are part of the supported experience.
-- Desktop should keep the core lesson within a mostly single-screen stage. Narrow layouts may scroll when required for legibility and reachable controls.
+- Desktop is primary and should use most of the viewport. Narrow layouts may use contained internal scrolling when required for legibility.
 
 ## 5. Non-goals
 
 - Real OAuth/OIDC login or Microsoft Entra ID integration.
 - Credential collection, production token handling, or security testing against real services.
+- PKCE OFF / interception comparison in the current product slice; this is deferred rather than removed from the longer-term product direction.
 - A generalized scenario-authoring engine before multiple real lessons prove the need.
 - Accounts, progress sync, badges, XP, leaderboards, or other gamification unrelated to protocol understanding.
 - Certification, compliance, or a claim that the simplified simulation replaces the normative specifications.
@@ -51,7 +55,7 @@ A learning flow is supported only when:
 - core state transitions have focused automated tests;
 - the rendered interaction has been reviewed at approximately 1440px, 390px, and 320px widths;
 - keyboard/focus and reduced-motion behavior have been checked for affected interactions;
-- insecure teaching states are explicitly labeled and cannot be confused with recommended implementation guidance.
+- visual simplification does not imply false network boundaries, for example by presenting human interaction as direct server-to-human network traffic.
 
 ## 7. Evolution rules
 
