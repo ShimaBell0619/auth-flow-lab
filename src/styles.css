@@ -79,9 +79,7 @@ button:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
   height: 100%;
   min-height: 610px;
   overflow: hidden;
-  background-color: #fff;
-  background-image: radial-gradient(circle, #eef1f4 0.8px, transparent 0.8px);
-  background-size: 28px 28px;
+  background: #fff;
 }
 
 .route-layer,

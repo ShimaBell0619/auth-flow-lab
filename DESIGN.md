@@ -21,7 +21,7 @@ Use a clean white canvas and semantic accents:
 - `canvas`: pure white (`#ffffff`).
 - `ink`: primary text and structural linework (`#101828`).
 - `muted`: secondary labels (`#667085`).
-- `soft`: subtle trail/grid/support lines (`#eaecf0`).
+- `soft`: subtle trail/support lines (`#eaecf0`).
 - `protocol`: normal network movement (`#2563eb`).
 - `challenge`: PKCE preparation and verifier/challenge semantics (`#7c3aed`).
 - `success`: successful Token/API return (`#15803d`).
@@ -29,7 +29,7 @@ Use a clean white canvas and semantic accents:
 
 Color never carries the full meaning. Packet labels, actor labels, direction, line style, and short bubble copy reinforce the state.
 
-Do not reintroduce the warm beige lab-board background.
+Do not reintroduce the warm beige lab-board background or a dotted/grid canvas texture. The white stage should be structured by actors and communication routes, not decorative background marks.
 
 ## Typography
 
@@ -55,6 +55,7 @@ At narrow widths, preserve the desktop geometry inside a contained horizontal sc
 
 - Actor nodes use large, simple line icons with visible names and compact roles.
 - Actor positions remain stable while the current event changes.
+- The primary desktop topology is predominantly horizontal so direction changes are legible as packet travel and return traffic rather than vertical scene changes.
 - The active route is clearly emphasized and ends with a visible direction marker.
 - A glowing packet/pulse travels along the active route for network messages.
 - Local operations such as verifier creation or verifier checking use a local loop around the relevant actor.
@@ -123,5 +124,5 @@ Specialist CSS/SVG is justified for route geometry, packet motion, actor placeme
 - Do not add a separate inspector or long explanation panel.
 - Do not add generic Next/Previous buttons for normal progression.
 - Do not reintroduce PKCE ON/OFF comparison until it is explicitly brought back into scope.
-- Do not use beige paper styling, decorative glass panels, gradients/glows unrelated to packet state, or generic dashboard composition.
+- Do not use beige paper styling, decorative canvas grids, glass panels, gradients/glows unrelated to packet state, or generic dashboard composition.
 - Do not imply that human input is direct network traffic to a server.
