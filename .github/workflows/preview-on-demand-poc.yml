@@ -1,0 +1,68 @@
+name: PoC On-demand Preview
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: read
+  issues: write
+
+jobs:
+  preview:
+    if: >-
+      ${{ github.event.issue.pull_request &&
+          github.event.comment.body == '/preview' &&
+          github.event.comment.author_association == 'OWNER' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+      PR_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - name: Validate PR and move synthetic Preview ref
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pr_json="$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")"
+          state="$(jq -r '.state' <<<"$pr_json")"
+          base_repo="$(jq -r '.base.repo.full_name' <<<"$pr_json")"
+          base_ref="$(jq -r '.base.ref' <<<"$pr_json")"
+          head_repo="$(jq -r '.head.repo.full_name' <<<"$pr_json")"
+          head_sha="$(jq -r '.head.sha' <<<"$pr_json")"
+
+          [[ "$state" == 'open' ]]
+          [[ "$base_repo" == "$REPOSITORY" ]]
+          [[ "$base_ref" == 'main' ]]
+          [[ "$head_repo" == "$REPOSITORY" ]]
+          [[ "$head_sha" =~ ^[0-9a-f]{40}$ ]]
+
+          preview_branch="preview/pr-$PR_NUMBER"
+          ref_api="repos/$REPOSITORY/git/refs/heads/$preview_branch"
+
+          if gh api "repos/$REPOSITORY/git/ref/heads/$preview_branch" >/dev/null 2>&1; then
+            gh api --method PATCH "$ref_api" -f sha="$head_sha" -F force=true >/dev/null
+          else
+            gh api --method POST "repos/$REPOSITORY/git/refs" \
+              -f ref="refs/heads/$preview_branch" \
+              -f sha="$head_sha" >/dev/null
+          fi
+
+          verified_sha="$(gh api "repos/$REPOSITORY/git/ref/heads/$preview_branch" --jq '.object.sha')"
+          [[ "$verified_sha" == "$head_sha" ]]
+
+          short_sha="${head_sha:0:7}"
+          body=$(cat <<EOF
+          On-demand Preview requested.
+
+          - PR: #$PR_NUMBER
+          - Source SHA: \`$short_sha\`
+          - Synthetic branch: \`$preview_branch\`
+
+          Vercel Git Integration owns the actual Preview deployment. This PoC does not use a Vercel token or execute PR code with the GitHub write token.
+          EOF
+          )
+          gh api --method POST "repos/$REPOSITORY/issues/$PR_NUMBER/comments" -f body="$body" >/dev/null
