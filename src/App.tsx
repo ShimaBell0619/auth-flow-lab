@@ -25,38 +25,38 @@ const PACKET_TRAVEL_MS = 1900;
 const ACTOR_ROUTE_RADIUS = 54;
 
 const actorPositions: Record<ActorId, Point> = {
-  user: { x: 88, y: 380 },
-  client: { x: 288, y: 380 },
-  auth: { x: 505, y: 145 },
-  token: { x: 715, y: 380 },
-  api: { x: 918, y: 145 },
+  user: { x: 92, y: 310 },
+  client: { x: 296, y: 310 },
+  auth: { x: 500, y: 310 },
+  token: { x: 704, y: 310 },
+  api: { x: 908, y: 310 },
 };
 
 const routeBends: Record<string, number> = {
-  authorize: -22,
-  "login-ui": 38,
-  "user-interaction": -32,
-  "login-submit": 68,
-  "code-return": -58,
-  "token-request": -52,
-  "token-return": 52,
-  "api-request": -28,
-  "api-response": 48,
+  authorize: -110,
+  "login-ui": -110,
+  "user-interaction": -110,
+  "login-submit": 170,
+  "code-return": 170,
+  "token-request": 250,
+  "token-return": 250,
+  "api-request": -300,
+  "api-response": -300,
 };
 
 const bubbleNudges: Record<string, Point> = {
-  verifier: { x: 0, y: -22 },
-  challenge: { x: 0, y: -22 },
-  authorize: { x: 2, y: -36 },
-  "login-ui": { x: 0, y: 38 },
-  "user-interaction": { x: 0, y: -52 },
-  "login-submit": { x: 15, y: 44 },
-  "code-return": { x: 18, y: -42 },
-  "token-request": { x: 0, y: -54 },
-  "verifier-check": { x: 0, y: -18 },
-  "token-return": { x: 0, y: 48 },
-  "api-request": { x: 12, y: -42 },
-  "api-response": { x: 18, y: 46 },
+  verifier: { x: -58, y: 0 },
+  challenge: { x: 64, y: 0 },
+  authorize: { x: 0, y: -50 },
+  "login-ui": { x: 0, y: 62 },
+  "user-interaction": { x: 0, y: -60 },
+  "login-submit": { x: 0, y: 64 },
+  "code-return": { x: 0, y: -62 },
+  "token-request": { x: 0, y: 58 },
+  "verifier-check": { x: 0, y: 0 },
+  "token-return": { x: 0, y: -58 },
+  "api-request": { x: 0, y: -38 },
+  "api-response": { x: 0, y: 28 },
 };
 
 const markerForTone = (tone: EventTone) => `url(#arrow-${tone})`;
@@ -67,7 +67,7 @@ const getRouteGeometry = (event: FlowEvent): RouteGeometry => {
   const nudge = bubbleNudges[event.id] ?? { x: 0, y: 0 };
 
   if (event.from === event.to) {
-    const loopHeight = event.id === "verifier-check" ? 92 : 86;
+    const loopHeight = event.id === "challenge" ? 118 : event.id === "verifier-check" ? 94 : 78;
     const base = { x: sourceCenter.x, y: sourceCenter.y - ACTOR_ROUTE_RADIUS };
     const path = `M ${base.x} ${base.y} C ${base.x - 72} ${base.y - loopHeight}, ${base.x + 72} ${base.y - loopHeight}, ${base.x} ${base.y}`;
     return {

@@ -3,13 +3,21 @@ import { expect, test } from "@playwright/test";
 test("renders one white animated protocol stage without the old inspector controls", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" })).toBeVisible();
+  const stage = page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" });
+  await expect(stage).toBeVisible();
   await expect(page.getByRole("button", { name: "Story" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Break it/ })).toHaveCount(0);
   await expect(page.getByLabel("選択中の通信の説明")).toHaveCount(0);
 
   const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const stageBackground = await stage.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { color: style.backgroundColor, image: style.backgroundImage };
+  });
+
   expect(background).toBe("rgb(255, 255, 255)");
+  expect(stageBackground.color).toBe("rgb(255, 255, 255)");
+  expect(stageBackground.image).toBe("none");
 });
 
 test("timeline selection shows the chosen event in the stage and leaves completed trails", async ({ page }) => {
