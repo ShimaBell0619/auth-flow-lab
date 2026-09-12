@@ -7,7 +7,6 @@ on:
 permissions:
   contents: write
   pull-requests: read
-  issues: write
 
 jobs:
   preview:
@@ -22,7 +21,8 @@ jobs:
       REPOSITORY: ${{ github.repository }}
       PR_NUMBER: ${{ github.event.issue.number }}
     steps:
-      - name: Validate PR and move synthetic Preview ref
+      - name: Validate requested PR
+        id: request
         shell: bash
         run: |
           set -euo pipefail
@@ -40,29 +40,50 @@ jobs:
           [[ "$head_repo" == "$REPOSITORY" ]]
           [[ "$head_sha" =~ ^[0-9a-f]{40}$ ]]
 
-          preview_branch="preview/pr-$PR_NUMBER"
-          ref_api="repos/$REPOSITORY/git/refs/heads/$preview_branch"
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+          echo "preview_branch=preview/pr-$PR_NUMBER" >> "$GITHUB_OUTPUT"
 
-          if gh api "repos/$REPOSITORY/git/ref/heads/$preview_branch" >/dev/null 2>&1; then
-            gh api --method PATCH "$ref_api" -f sha="$head_sha" -F force=true >/dev/null
-          else
-            gh api --method POST "repos/$REPOSITORY/git/refs" \
-              -f ref="refs/heads/$preview_branch" \
-              -f sha="$head_sha" >/dev/null
+      - name: Checkout trusted main automation context
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Push synthetic Preview branch
+        shell: bash
+        env:
+          HEAD_SHA: ${{ steps.request.outputs.head_sha }}
+          PREVIEW_BRANCH: ${{ steps.request.outputs.preview_branch }}
+        run: |
+          set -euo pipefail
+
+          git fetch --no-tags origin "$HEAD_SHA"
+          expected="$(git ls-remote --heads origin "refs/heads/$PREVIEW_BRANCH" | awk '{print $1}')"
+
+          if [[ "$expected" == "$HEAD_SHA" ]]; then
+            # The first PoC used the REST refs API and already created this exact ref.
+            # Delete/recreate it once through Git so this run proves the push-webhook path.
+            git push origin --delete "$PREVIEW_BRANCH"
+            expected=''
           fi
 
-          verified_sha="$(gh api "repos/$REPOSITORY/git/ref/heads/$preview_branch" --jq '.object.sha')"
-          [[ "$verified_sha" == "$head_sha" ]]
+          if [[ -n "$expected" ]]; then
+            git push origin \
+              "$HEAD_SHA:refs/heads/$PREVIEW_BRANCH" \
+              "--force-with-lease=refs/heads/$PREVIEW_BRANCH:$expected"
+          else
+            git push origin "$HEAD_SHA:refs/heads/$PREVIEW_BRANCH"
+          fi
 
-          short_sha="${head_sha:0:7}"
-          body=$(cat <<EOF
-          On-demand Preview requested.
+          verified="$(git ls-remote --heads origin "refs/heads/$PREVIEW_BRANCH" | awk '{print $1}')"
+          [[ "$verified" == "$HEAD_SHA" ]]
 
-          - PR: #$PR_NUMBER
-          - Source SHA: \`$short_sha\`
-          - Synthetic branch: \`$preview_branch\`
-
-          Vercel Git Integration owns the actual Preview deployment. This PoC does not use a Vercel token or execute PR code with the GitHub write token.
-          EOF
-          )
-          gh api --method POST "repos/$REPOSITORY/issues/$PR_NUMBER/comments" -f body="$body" >/dev/null
+          {
+            echo '## On-demand Preview PoC'
+            echo
+            echo "- PR: #$PR_NUMBER"
+            echo "- Synthetic branch: \`$PREVIEW_BRANCH\`"
+            echo "- Source SHA: \`$HEAD_SHA\`"
+            echo '- Ref moved through Git push; Vercel Git Integration owns deployment.'
+          } >> "$GITHUB_STEP_SUMMARY"
