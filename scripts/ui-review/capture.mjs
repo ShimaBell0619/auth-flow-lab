@@ -10,6 +10,12 @@ const views = [
   { name: "narrow-320", width: 320, height: 800 },
 ];
 
+const desktopStates = [
+  { name: "desktop-code-return-1440", step: "Step 7: Code" },
+  { name: "desktop-token-return-1440", step: "Step 10: Token" },
+  { name: "desktop-api-response-1440", step: "Step 12: Response" },
+];
+
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch();
 
@@ -26,6 +32,20 @@ try {
     });
     await page.close();
   }
+
+  const desktop = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+    reducedMotion: "reduce",
+  });
+  await desktop.goto(baseURL, { waitUntil: "networkidle" });
+  for (const state of desktopStates) {
+    await desktop.getByRole("button", { name: state.step }).click();
+    await desktop.screenshot({
+      path: `${output}/${state.name}.png`,
+      fullPage: true,
+    });
+  }
+  await desktop.close();
 } finally {
   await browser.close();
 }
