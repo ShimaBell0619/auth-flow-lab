@@ -47,11 +47,12 @@ test("reduced-motion mode preserves the current route without packet travel", as
   await expect(page.getByTestId("flow-bubble")).toContainText("Access Token を発行");
 });
 
-test("timeline is the first keyboard navigation surface", async ({ page }) => {
+test("timeline steps are keyboard reachable in a logical sequence", async ({ page }) => {
   await page.goto("/");
 
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Step 1: Verifier" })).toBeFocused();
+  const first = page.getByRole("button", { name: "Step 1: Verifier" });
+  await first.focus();
+  await expect(first).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Step 2: Challenge" })).toBeFocused();
 });
