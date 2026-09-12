@@ -42,16 +42,16 @@ npm run test:e2e
 
 ## Hosting
 
-Hosting follows the adopted Web App Foundation v0.9.1 Vercel profile:
+Hosting follows the adopted Web App Foundation v0.9.2 Vercel profile:
 
-- ordinary feature/PR branches → no Vercel deployment after provider-side adoption is verified; review through GitHub Actions CI and rendered UI-review artifacts;
+- ordinary feature/PR branches → no Vercel deployment; review through GitHub Actions CI and rendered UI-review artifacts;
 - explicitly selected PR HEAD → Fixed Staging through the trusted `staging` slot;
 - `staging` → the single Vercel hosted non-Production review surface;
 - `main` → Vercel Production deployment.
 
-`vercel.json` records the repository policy: Git deployment is disabled for every branch except `main` and `staging`, while the Vite SPA fallback rewrite is preserved. `staging` is a mutable review slot, not release history. No parallel GitHub Pages or custom Vercel deployment path is maintained.
+`vercel.json` uses slash-safe `"**": false` to disable Git deployment for ordinary branches, while `main` and `staging` are explicitly enabled. The Vite SPA fallback rewrite is preserved. `staging` is a mutable review slot, not release history. No parallel GitHub Pages or custom Vercel deployment path is maintained.
 
-Provider-side adoption is still being verified. A post-v0.9.0 smoke showed that an ordinary feature branch still received a Vercel deployment despite the repository policy being present on `main`. Foundation v0.9.1 therefore requires Vercel Project Preview/Production Branch Tracking inspection plus a post-adoption three-path smoke before this repository is considered fully migrated. See `docs/FOUNDATION.md` for the current evidence and remaining provider setup.
+The previous v0.9.0/v0.9.1 feature-Preview leak was caused by the old single-star minimatch rule, not by Vercel Branch Tracking: Preview Branch Tracking is enabled and Production tracks `main`. The v0.9.2 policy corrects that rule; `docs/FOUNDATION.md` records the post-merge smoke required to prove the effective behavior.
 
 ## Contracts
 
@@ -61,7 +61,7 @@ Provider-side adoption is still being verified. A post-v0.9.0 smoke showed that 
 - `docs/ARCHITECTURE.md` — technical and simulation boundaries
 - `docs/FOUNDATION.md` — Web App Foundation provenance and hosting profile
 
-This consumer currently adopts `web-app-foundation` **v0.9.1** at commit `dc4ff0055a71c58dc43c33bcce87514d1cd79bbc`.
+This consumer currently adopts `web-app-foundation` **v0.9.2** at commit `d4a1c4ba018063a187621a00ab892af275ab20af`.
 
 ## Protocol references
 
