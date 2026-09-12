@@ -51,7 +51,7 @@ Hosting follows the adopted Web App Foundation v0.9.2 Vercel profile:
 
 `vercel.json` uses slash-safe `"**": false` to disable Git deployment for ordinary branches, while `main` and `staging` are explicitly enabled. The Vite SPA fallback rewrite is preserved. `staging` is a mutable review slot, not release history. No parallel GitHub Pages or custom Vercel deployment path is maintained.
 
-The previous v0.9.0/v0.9.1 feature-Preview leak was caused by the old single-star minimatch rule, not by Vercel Branch Tracking: Preview Branch Tracking is enabled and Production tracks `main`. The v0.9.2 policy corrects that rule; `docs/FOUNDATION.md` records the post-merge smoke required to prove the effective behavior.
+The previous v0.9.0/v0.9.1 feature-Preview leak was caused by the old single-star minimatch rule, not by Vercel Branch Tracking. The v0.9.2 correction has now passed the real three-path smoke: Production and `staging` deploy successfully, while a slash-containing ordinary branch receives no Vercel status. See `docs/FOUNDATION.md` for the recorded evidence and the separate external Fixed Staging configuration boundary.
 
 ## Contracts
 
