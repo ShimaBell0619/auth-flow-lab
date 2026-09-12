@@ -1,19 +1,21 @@
 # auth-flow-lab
 
-Authentication and authorization concepts are difficult because most of the important behavior is invisible. `auth-flow-lab` turns message exchange into an interactive learning surface: select or advance one protocol event, follow who sends what to whom, then deepen that same event from Story to Protocol to representative Wire detail.
+Authentication and authorization concepts are difficult because most of the important behavior is invisible. `auth-flow-lab` turns protocol exchange into a spatial learning surface where messages visibly move between stable actors and prior communication remains as faint context.
 
-The first lesson teaches **OAuth 2.0 Authorization Code + PKCE** and compares a protected flow with a deliberately insecure no-PKCE interception simulation.
+The first lesson teaches the **normal OAuth 2.0 Authorization Code + PKCE flow**: verifier/challenge preparation, browser-mediated authorization, Authorization Code return, Token exchange, and Protected API access.
 
 > This repository contains an educational simulation only. It does not perform real authentication, collect credentials, exchange real tokens, persist learner data, or send telemetry.
 
 ## Current experience
 
-- desktop-first animated sequence diagram with User, Browser/App, Authorization, Token Endpoint, Protected API, and simulated Attacker lanes;
-- explicit request and return messages, including redirect, token response, API response, and rejection response;
-- Story / Protocol / Wire views for the same selected sequence event;
-- synthetic `code_verifier` / `code_challenge` preparation and PKCE verification;
-- `Break it` comparison that keeps the same diagram shape while marking PKCE-only events as skipped;
-- keyboard-focus and reduced-motion support, with narrow layouts contained in their own sequence scroll surface.
+- desktop-first white protocol stage with large actor icons;
+- glowing packet/pulse movement between Browser/App, Authorization, Token Endpoint, and Protected API;
+- local PKCE operations and human browser interaction visually distinguished from network traffic;
+- completed communication retained as faint directional trails;
+- one concise in-stage speech bubble for the current event;
+- one-time auto-play on load, then direct navigation from a compact bottom timeline;
+- no separate inspector, Story/Protocol/Wire switch, generic Next/Previous action deck, or PKCE ON/OFF comparison in the current slice;
+- keyboard-focus and reduced-motion support, with narrow layouts keeping the wide stage inside contained scroll surfaces.
 
 ## Development
 
@@ -34,13 +36,23 @@ npm run build
 npm run test:e2e
 ```
 
+## Hosting
+
+Hosting follows the adopted Web App Foundation Vercel profile:
+
+- PR/branch → Vercel Preview deployment;
+- `main` → Vercel Production deployment;
+- GitHub Actions → reusable quality CI and rendered UI review only.
+
+No parallel GitHub Pages deployment path is maintained.
+
 ## Contracts
 
 - `PRODUCT.md` — supported product behavior and non-goals
 - `DESIGN.md` — UI/UX direction and design system decisions
 - `AGENTS.md` — implementation/review rules and context routing
 - `docs/ARCHITECTURE.md` — technical and simulation boundaries
-- `docs/FOUNDATION.md` — Web App Foundation provenance
+- `docs/FOUNDATION.md` — Web App Foundation provenance and hosting profile
 
 This consumer currently adopts `web-app-foundation` **v0.8.1** at commit `9061ea222e5e6bba1197b03088c6cb2c13f7e0c4`.
 

@@ -1,90 +1,62 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-const authorizationInteractionActions = [
-  "認可要求を送る",
-  "ログイン画面をBrowserへ返す",
-  "ログイン・同意を操作する",
-  "認証・同意を送信する",
-  "Authorization Codeを返す",
-] as const;
-
-const advanceSafeFlowToAttackerResult = async (page: Page) => {
-  for (const name of [
-    "code_verifier を生成する",
-    "S256 challenge を作る",
-    ...authorizationInteractionActions,
-    "Codeを横取りしてみる",
-    "盗んだCodeで交換を試す",
-  ]) {
-    await page.getByRole("button", { name }).click();
-  }
-};
-
-test("Story, Protocol, and Wire deepen the same selected message", async ({ page }) => {
+test("renders one white animated protocol stage without the old inspector controls", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByText("WIRE MESSAGE · REPRESENTATIVE")).toBeHidden();
-  await page.getByRole("button", { name: "Protocol" }).click();
-  await expect(page.getByRole("heading", { name: "Client creates a code_verifier" })).toBeVisible();
-  await page.getByRole("button", { name: "Wire" }).click();
-  await expect(page.getByText("WIRE MESSAGE · REPRESENTATIVE")).toBeVisible();
-  await expect(page.getByText(/high_entropy_random/)).toBeVisible();
+  await expect(page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Story" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Break it/ })).toHaveCount(0);
+  await expect(page.getByLabel("選択中の通信の説明")).toHaveCount(0);
+
+  const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  expect(background).toBe("rgb(255, 255, 255)");
 });
 
-test("safe sequence shows browser-mediated authorization and explicit return traffic", async ({ page }) => {
+test("timeline selection shows the chosen event in the stage and leaves completed trails", async ({ page }) => {
   await page.goto("/");
-  const inspector = page.getByLabel("選択中の通信の説明");
 
-  await expect(page.getByText("推奨フロー · PKCE ON")).toBeVisible();
-  await expect(page.getByRole("button", { name: /Login \/ Consent UI/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Authentication \/ Consent submission/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /302 · Authorization Code/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /200 · protected resource/ })).toBeVisible();
+  await page.getByRole("button", { name: "Step 7: Code" }).click();
 
-  await advanceSafeFlowToAttackerResult(page);
-  await expect(inspector.getByText("400 · invalid_grant", { exact: true })).toBeVisible();
-
-  await page.getByRole("button", { name: "Wire" }).click();
-  await expect(inspector.getByText(/400 Bad Request/)).toBeVisible();
+  const stage = page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" });
+  await expect(stage).toHaveAttribute("data-step", "code-return");
+  await expect(page.getByTestId("flow-bubble")).toContainText("Authorization Code を返す");
+  await expect(page.getByTestId("flow-bubble")).toContainText("302 · AUTH_CODE");
+  expect(await page.getByTestId("completed-trail").count()).toBe(6);
 });
 
-test("Break it keeps the same diagram but skips PKCE-only rows and routes the token to the attacker", async ({ page }) => {
+test("full-motion mode contains an SVG packet motion for the active route", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
-  const inspector = page.getByLabel("選択中の通信の説明");
-  await page.getByRole("button", { name: /Break it/ }).click();
+  await page.getByRole("button", { name: "Step 8: Token Req" }).click();
 
-  await expect(page.getByText("実験モード · PKCE OFF")).toBeVisible();
-  await expect(page.getByRole("button", { name: /SKIP · code_verifier/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /SKIP · S256/ })).toBeVisible();
-
-  await page.getByRole("button", { name: "GET /authorize · NO PKCE" }).click();
-  for (const name of [
-    ...authorizationInteractionActions,
-    "Codeを横取りしてみる",
-    "盗んだCodeで交換を試す",
-  ]) {
-    await page.getByRole("button", { name }).click();
-  }
-
-  await expect(inspector.getByText("200 · stolen Access Token", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "攻撃者のAPIアクセスを見る" }).click();
-  await expect(inspector.getByText("GET /resource · stolen token", { exact: true })).toBeVisible();
+  const stage = page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" });
+  await expect(stage).toHaveAttribute("data-motion", "full");
+  await expect(page.getByTestId("active-packet")).toBeVisible();
+  await expect(page.locator("animateMotion")).toHaveCount(2);
 });
 
-test("core controls are reachable in a logical keyboard order", async ({ page }) => {
+test("reduced-motion mode preserves the current route without packet travel", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Step 10: Token" }).click();
+
+  const stage = page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" });
+  await expect(stage).toHaveAttribute("data-motion", "reduced");
+  await expect(page.getByTestId("active-packet-static")).toBeVisible();
+  await expect(page.locator("animateMotion")).toHaveCount(0);
+  await expect(page.getByTestId("flow-bubble")).toContainText("Access Token を発行");
+});
+
+test("timeline is the first keyboard navigation surface", async ({ page }) => {
   await page.goto("/");
 
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Story" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Step 1: Verifier" })).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Protocol" })).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Wire" })).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: /Break it/ })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Step 2: Challenge" })).toBeFocused();
 });
 
-test("narrow layout contains the wide sequence inside its own scroll surface", async ({ page }) => {
+test("narrow layouts keep the wide stage inside its own scroll surface", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto("/");
 
@@ -92,5 +64,5 @@ test("narrow layout contains the wide sequence inside its own scroll surface", a
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(1);
-  await expect(page.getByRole("region", { name: "PKCE通信シーケンス" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" })).toBeVisible();
 });

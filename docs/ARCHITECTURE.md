@@ -7,11 +7,11 @@ The first `auth-flow-lab` slice is a client-only React + TypeScript + Vite appli
 ```text
 PRODUCT / DESIGN contracts
         ↓
-pure PKCE scenario model
+pure PKCE normal-flow model
         ↓
-React semantic learning components
+React semantic stage components
         ↓
-Tailwind infrastructure + specialist stage CSS
+Tailwind infrastructure + specialist stage CSS/SVG
         ↓
 browser DOM / CSS / SVG
 ```
@@ -20,15 +20,19 @@ There is no backend, database, identity provider, analytics endpoint, or runtime
 
 ## State boundary
 
-Scenario state is ephemeral React state. The protocol model owns deterministic teaching facts such as step order, labels, representative request shapes, and safe/insecure outcome differences. UI state owns presentation concerns such as the current Story/Protocol view.
+The pure scenario model owns deterministic teaching facts such as actor identities, event order, event kind, concise packet labels, and short bubble copy.
+
+React UI state owns presentation-only concerns: current event index, whether the one-time auto-play is still active, and reduced-motion behavior. Actor coordinates, route curvature, packet motion, and bubble placement remain presentation geometry rather than protocol-domain state.
 
 Do not introduce global state management, routing, a generic scenario engine, service/repository layers, or persistence for the initial single-lesson slice.
 
 ## Simulation boundary
 
-All codes, verifiers, challenges, tokens, endpoints, and responses shown in the UI are synthetic examples. No credential or token value is accepted from the learner and no OAuth request is sent over the network.
+All codes, verifiers, challenges, tokens, endpoints, and responses shown in the UI are synthetic teaching examples. No credential or token value is accepted from the learner and no OAuth request is sent over the network.
 
-The no-PKCE `Break it` path is intentionally simplified to teach authorization-code interception: it models an attacker obtaining the code before the legitimate client and demonstrates why sender-constraining the code exchange with PKCE changes the outcome. It is not a penetration-testing implementation.
+The current slice shows only the normal Authorization Code + PKCE flow. The previous no-PKCE / interception comparison is intentionally deferred by product decision; do not keep hidden attack state or parallel unsafe branches in the current implementation.
+
+Human login/consent is represented separately from network traffic: User → Browser/App is an interaction event, while Browser/App ↔ Authorization represents the browser-mediated network exchange. OAuth does not prescribe the concrete user-authentication mechanism, so the visualization must remain representative rather than implying one fixed login protocol.
 
 A future change that introduces a real identity provider, credential handling, cross-origin communication, backend token exchange, external telemetry, persistence, or another trust boundary must be classified as Integration / trust (and Architecture / platform when applicable) and requires explicit product-owner approval before implementation.
 
@@ -37,9 +41,10 @@ A future change that introduces a real identity provider, credential handling, c
 Follow the Foundation v0.8.1 primitive-first profile:
 
 - Tailwind CSS is styling/token infrastructure, not the visual identity.
-- Use semantic HTML for ordinary controls; add an accessible primitive dependency only when a control's interaction complexity justifies it.
-- Product-specific spatial stage behavior may use specialist CSS/SVG because it expresses the protocol topology directly.
-- Keep the pure scenario model testable without the DOM.
+- Use semantic HTML for the compact timeline navigation.
+- Product-specific stage behavior may use specialist CSS/SVG because packet motion and route topology express the protocol directly.
+- Keep the pure flow model testable without the DOM.
+- Respect `prefers-reduced-motion`: route meaning and current state remain visible without packet travel animation.
 
 ## Validation
 
@@ -47,5 +52,5 @@ Follow the Foundation v0.8.1 primitive-first profile:
 - `npm run typecheck`
 - `npm run test`
 - `npm run build`
-- focused Playwright interaction checks
+- focused Playwright interaction/motion checks
 - rendered UI capture at approximately 1440px, 390px, and 320px
