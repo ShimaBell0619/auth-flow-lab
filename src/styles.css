@@ -131,6 +131,7 @@ select:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
 }
 .playback-controls button:hover:not(:disabled) { border-color: #98a2b3; color: var(--ink); }
 .playback-controls button:disabled { color: #98a2b3; background: #f9fafb; cursor: not-allowed; }
+.focus-current-button { display: none; }
 .speed-control {
   display: flex;
   align-items: center;
@@ -306,6 +307,43 @@ select:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.browser-location-cue {
+  position: absolute;
+  z-index: 4;
+  left: 20.5%;
+  top: 47%;
+  width: 185px;
+  padding: 6px 8px;
+  color: #344054;
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(16, 24, 40, 0.06);
+  pointer-events: none;
+}
+.browser-location-cue span,
+.browser-location-cue code,
+.browser-location-cue small { display: block; }
+.browser-location-cue span {
+  color: var(--muted);
+  font: 850 0.65rem/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: 0.04em;
+}
+.browser-location-cue code {
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--ink);
+  font: 750 0.7rem/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.browser-location-cue small {
+  margin-top: 3px;
+  color: #98a2b3;
+  font-size: 0.62rem;
+}
+.browser-location-cue.is-authorization { border-color: #b8cdf8; }
+.browser-location-cue.is-callback { border-color: #c7d7cd; }
 .verification-cue {
   position: absolute;
   z-index: 4;
@@ -370,6 +408,58 @@ select:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
   white-space: nowrap;
 }
 
+.lesson-footer { min-width: 0; background: #fff; }
+.completion-recap {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 9px clamp(18px, 2.4vw, 36px);
+  border-top: 1px solid var(--soft);
+  background: #f8fafc;
+}
+.completion-title strong,
+.completion-title span { display: block; }
+.completion-title strong { color: var(--ink); font-size: 0.78rem; }
+.completion-title span { margin-top: 2px; color: var(--muted); font: 700 0.64rem/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.completion-recap ul {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.completion-recap li {
+  position: relative;
+  padding-left: 12px;
+  color: #344054;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+.completion-recap li::before {
+  content: "•";
+  position: absolute;
+  left: 2px;
+  color: var(--success);
+  font-weight: 900;
+}
+.completion-recap button {
+  min-height: 32px;
+  padding: 6px 10px;
+  color: #344054;
+  background: #fff;
+  border: 1px solid var(--soft-strong);
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 780;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.completion-recap button:hover { border-color: #98a2b3; color: var(--ink); }
+
 .timeline-scroll {
   min-width: 0;
   overflow-x: auto;
@@ -429,8 +519,14 @@ select:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
   .lesson-purpose { font-size: 0.74rem; }
   .lesson-toolbar { align-items: flex-start; flex-direction: column; padding: 9px 14px 10px; }
   .playback-controls { justify-content: flex-start; }
+  .focus-current-button { display: inline-flex; align-items: center; }
   .stage-scroll { min-height: 650px; height: 650px; border-bottom: 1px solid var(--soft); }
   .protocol-stage { min-height: 650px; }
+  .completion-recap {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 9px 14px;
+  }
+  .completion-recap ul { grid-column: 1 / -1; }
 }
 
 @media (max-width: 480px) {
@@ -442,6 +538,9 @@ select:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
   .playback-controls { gap: 6px; }
   .playback-controls button { padding-inline: 8px; font-size: 0.73rem; }
   .speed-control { font-size: 0.7rem; }
+  .completion-recap { gap: 7px 10px; }
+  .completion-recap li { flex-basis: 100%; }
+  .completion-recap button { padding-inline: 8px; }
   .flow-timeline { padding-inline: 16px; }
 }
 
