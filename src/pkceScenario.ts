@@ -199,6 +199,13 @@ export interface PkceTeachingState {
   description?: string;
 }
 
+export interface BrowserLocationState {
+  stage: "application" | "authorization" | "callback";
+  label: string;
+  display: string;
+  ariaLabel: string;
+}
+
 const verifierRetentionEvents: readonly FlowEventId[] = [
   "verifier",
   "challenge",
@@ -223,6 +230,55 @@ const challengeAssociatedEvents: readonly FlowEventId[] = [
   "token-request",
   "verifier-check",
 ];
+
+const authorizationBrowserEvents: readonly FlowEventId[] = [
+  "authorize",
+  "login-ui",
+  "user-interaction",
+  "login-submit",
+];
+
+const callbackBrowserEvents: readonly FlowEventId[] = [
+  "code-return",
+  "token-request",
+  "verifier-check",
+  "token-return",
+  "api-request",
+  "api-response",
+];
+
+export const getBrowserLocation = (eventId: FlowEventId): BrowserLocationState => {
+  if (authorizationBrowserEvents.includes(eventId)) {
+    return {
+      stage: "authorization",
+      label: eventId === "authorize" ? "BROWSER · NAVIGATING" : "BROWSER · AUTH UI",
+      display: eventId === "authorize" ? "→ auth.example.test/authorize" : "auth.example.test/authorize",
+      ariaLabel:
+        eventId === "authorize"
+          ? "架空のブラウザー表示例: Authorization Server の authorize endpoint へ移動中"
+          : "架空のブラウザー表示例: Authorization Server のログイン・同意画面",
+    };
+  }
+
+  if (callbackBrowserEvents.includes(eventId)) {
+    return {
+      stage: "callback",
+      label: eventId === "code-return" ? "BROWSER · REDIRECT" : "BROWSER · APP CALLBACK",
+      display: eventId === "code-return" ? "→ app.example.test/callback" : "app.example.test/callback",
+      ariaLabel:
+        eventId === "code-return"
+          ? "架空のブラウザー表示例: Authorization Server からアプリの callback へ戻るリダイレクト"
+          : "架空のブラウザー表示例: アプリの callback 画面",
+    };
+  }
+
+  return {
+    stage: "application",
+    label: "BROWSER · APP",
+    display: "app.example.test/",
+    ariaLabel: "架空のブラウザー表示例: クライアントアプリ",
+  };
+};
 
 export const getPkceTeachingState = (eventId: FlowEventId): PkceTeachingState => {
   const state: PkceTeachingState = {};
