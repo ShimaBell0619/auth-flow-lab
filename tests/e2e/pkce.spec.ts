@@ -46,6 +46,30 @@ test("timeline selection shows the chosen event in the stage and leaves complete
   expect(await page.getByTestId("completed-trail").count()).toBe(7);
 });
 
+test("retained verifier and code challenge association stay visible across dependent steps", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Step 2: Verifier" }).click();
+  await expect(page.getByTestId("state-cue-client")).toContainText("保持中");
+  await expect(page.getByTestId("state-cue-client")).toContainText("code_verifier · vfy_demo_7K2");
+
+  await page.getByRole("button", { name: "Step 4: Authorize" }).click();
+  await expect(page.getByTestId("state-cue-auth")).toContainText("受信済み");
+  await expect(page.getByTestId("state-cue-auth")).toContainText("code_challenge · chl_demo_Q9P");
+  await expect(page.getByTestId("state-cue-auth")).not.toContainText("AUTH_CODE");
+
+  await page.getByRole("button", { name: "Step 8: Code" }).click();
+  await expect(page.getByTestId("state-cue-auth")).toContainText("Codeと関連");
+  await expect(page.getByTestId("state-cue-auth")).toContainText("AUTH_CODE ↔ chl_demo_Q9P");
+
+  await page.getByRole("button", { name: "Step 10: Verify" }).click();
+  await expect(page.getByTestId("verification-cue")).toContainText("S256(received verifier) → chl_demo_Q9P");
+  await expect(page.getByTestId("verification-cue")).toContainText("AUTH_CODE ↔ chl_demo_Q9P");
+  await expect(page.getByTestId("verification-cue")).toContainText("一致");
+  await expect(page.getByTestId("pkce-state-summary")).toContainText("Authorization Code に関連付けられた code_challenge");
+});
+
 test("playback controls pause, resume from a selected step, and restart", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -135,9 +159,10 @@ test("supporting labels are readable at the rendered baseline", async ({ page })
   expect(timelineFontSize).toBeGreaterThanOrEqual(12);
 });
 
-test("narrow layouts keep the wide stage inside its own scroll surface", async ({ page }) => {
+test("narrow layouts keep PKCE state cues inside the contained stage", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto("/");
+  await page.getByRole("button", { name: "Step 10: Verify" }).click();
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -145,4 +170,5 @@ test("narrow layouts keep the wide stage inside its own scroll surface", async (
   expect(overflow).toBeLessThanOrEqual(1);
   await expect(page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" })).toBeVisible();
   await expect(page.getByRole("region", { name: "レッスン再生操作" })).toBeVisible();
+  await expect(page.getByTestId("verification-cue")).toBeVisible();
 });

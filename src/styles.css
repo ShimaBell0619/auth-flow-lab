@@ -32,6 +32,17 @@ button,
 select { font: inherit; }
 button:focus-visible,
 select:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, white); outline-offset: 4px; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 .app-shell {
   width: 100%;
@@ -268,6 +279,54 @@ select:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
   border-color: color-mix(in srgb, var(--success) 50%, #d0d5dd);
   box-shadow: 0 0 0 7px color-mix(in srgb, var(--success) 8%, transparent);
 }
+.actor-state-cue {
+  width: max-content;
+  max-width: 194px;
+  margin: 8px auto 0;
+  padding: 6px 8px;
+  color: #5b21b6;
+  background: #faf9ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(76, 29, 149, 0.05);
+}
+.actor-state-cue span,
+.actor-state-cue code { display: block; }
+.actor-state-cue span {
+  color: #6d28d9;
+  font-size: 0.68rem;
+  font-weight: 850;
+  line-height: 1.1;
+}
+.actor-state-cue code {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #4c1d95;
+  font: 750 0.72rem/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.verification-cue {
+  position: absolute;
+  z-index: 4;
+  left: 70.4%;
+  top: 91%;
+  width: 252px;
+  transform: translate(-50%, -100%);
+  padding: 8px 10px;
+  color: var(--challenge);
+  background: #fff;
+  border: 1px solid #c4b5fd;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(76, 29, 149, 0.08);
+  pointer-events: none;
+}
+.verification-cue span,
+.verification-cue code,
+.verification-cue strong { display: block; }
+.verification-cue span { font: 850 0.68rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 0.08em; }
+.verification-cue code { margin-top: 4px; color: #4c1d95; font: 750 0.72rem/1.25 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.verification-cue strong { margin-top: 5px; color: var(--success); font-size: 0.75rem; }
 
 .flow-bubble {
   position: absolute;
