@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   actors,
+  evaluateVerifierCandidate,
   flowEvents,
   getBrowserLocation,
   getPkceTeachingState,
@@ -106,6 +107,30 @@ describe("PKCE normal-flow model", () => {
     expect(getBrowserLocation("token-request")).toMatchObject({
       stage: "callback",
       display: "app.example.test/callback",
+    });
+  });
+
+  it("continues normally when the correct synthetic verifier matches", () => {
+    expect(evaluateVerifierCandidate("correct")).toEqual({
+      candidateId: "correct",
+      receivedVerifier: pkceTeachingValues.verifier,
+      derivedChallenge: pkceTeachingValues.challenge,
+      associatedCode: pkceTeachingValues.code,
+      associatedChallenge: pkceTeachingValues.challenge,
+      matches: true,
+      error: null,
+    });
+  });
+
+  it("returns invalid_grant when the synthetic verifier derives a different challenge", () => {
+    expect(evaluateVerifierCandidate("mismatch")).toEqual({
+      candidateId: "mismatch",
+      receivedVerifier: pkceTeachingValues.mismatchVerifier,
+      derivedChallenge: pkceTeachingValues.mismatchChallenge,
+      associatedCode: pkceTeachingValues.code,
+      associatedChallenge: pkceTeachingValues.challenge,
+      matches: false,
+      error: "invalid_grant",
     });
   });
 

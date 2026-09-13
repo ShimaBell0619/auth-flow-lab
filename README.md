@@ -2,9 +2,9 @@
 
 Authentication and authorization concepts are difficult because most of the important behavior is invisible. `auth-flow-lab` turns protocol exchange into a spatial learning surface where messages visibly move between stable actors, prior communication remains as faint context, and responsibility boundaries show where each role belongs.
 
-The first lesson teaches the **normal OAuth 2.0 Authorization Code + PKCE flow**. It begins with a scenario-level user action that starts sign-in, then shows verifier/challenge preparation, browser-mediated authorization, Authorization Code return, Token exchange, and Protected API access.
+The first lesson teaches the **normal OAuth 2.0 Authorization Code + PKCE flow**. It begins with a scenario-level user action that starts sign-in, then shows verifier/challenge preparation, browser-mediated authorization, Authorization Code return, Token exchange, and Protected API access. After that normal flow, an optional synthetic verifier experiment lets the learner change the verifier used at Token exchange and observe a successful comparison or an `invalid_grant` rejection.
 
-> This repository contains an educational simulation only. It does not perform real authentication, collect credentials, exchange real tokens, persist learner data, or send telemetry.
+> This repository contains an educational simulation only. It does not perform real authentication, collect credentials, exchange real tokens, persist learner data, run attacks, or send telemetry.
 
 ## Current experience
 
@@ -13,12 +13,16 @@ The first lesson teaches the **normal OAuth 2.0 Authorization Code + PKCE flow**
 - restrained placement boundaries: Browser/App inside `CLIENT DEVICE`, Authorization + Token Endpoint inside `AUTHORIZATION SERVER`, and Protected API inside `RESOURCE SERVER`;
 - glowing packet/pulse movement between actors, with human interaction visually distinguished from network traffic;
 - local PKCE operations visually distinguished from network exchange;
+- retained verifier and Authorization Code ↔ challenge teaching cues across dependent steps;
+- a compact synthetic browser-location cue for app → Authorization Server UI → callback orientation;
 - completed communication retained as faint directional trails;
 - one concise in-stage speech bubble for the current event;
 - one-time auto-play on load plus compact Play/Pause, replay-current, restart, and playback-speed controls;
 - current phase and `current / total` progress shown without turning the timeline into a wizard;
-- direct navigation from a compact bottom timeline;
-- no separate inspector, Story/Protocol/Wire switch, generic Next/Previous action deck, or PKCE ON/OFF comparison in the current slice;
+- direct navigation from a compact bottom timeline, plus an explicit `現在の通信へ` helper on narrow layouts;
+- compact completion recap followed by an optional verifier-mismatch experiment on the same stage;
+- mismatch verification stops before Token issuance and shows `invalid_grant`; switching to the correct synthetic verifier re-enables the success path;
+- no separate inspector, Story/Protocol/Wire switch, generic Next/Previous action deck, PKCE ON/OFF comparison, or attacker simulation in the current slice;
 - keyboard-focus and reduced-motion support, with narrow layouts keeping the wide stage inside contained scroll surfaces.
 
 The system boundaries are teaching aids for logical roles/responsibilities. They do not prescribe a physical server count or deployment topology.
@@ -69,4 +73,4 @@ This consumer adopts `web-app-foundation` **v0.10.0** at commit `007352e15fcc6f9
 
 ## Protocol references
 
-The learning content is grounded in the normative OAuth/PKCE material, including RFC 7636 (PKCE), RFC 6749 (OAuth 2.0 Authorization Code), and RFC 9700 (OAuth 2.0 Security Best Current Practice). The UI intentionally simplifies the scenario for teaching; the specifications remain authoritative.
+The learning content is grounded in the normative OAuth/PKCE material, including RFC 7636 (PKCE), RFC 6749 (OAuth 2.0 Authorization Code), and RFC 9700 (OAuth 2.0 Security Best Current Practice). For the S256 teaching path, a verifier mismatch is represented as the RFC 7636 §4.6 `invalid_grant` outcome. The UI intentionally simplifies the scenario for teaching; the specifications remain authoritative.

@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   actors,
+  evaluateVerifierCandidate,
   flowEvents,
   getBrowserLocation,
   getPkceTeachingState,
   nextFlowIndex,
+  pkceTeachingValues,
   type ActorId,
   type EventTone,
   type FlowEvent,
+  type VerifierCandidateId,
+  type VerifierEvaluation,
 } from "./pkceScenario";
 
 interface Point {
@@ -36,6 +40,13 @@ interface ActorStateCue {
   ariaLabel: string;
 }
 
+interface VerifierExperimentView {
+  active: boolean;
+  candidate: VerifierCandidateId | null;
+  verified: boolean;
+  outcome: VerifierEvaluation | null;
+}
+
 type PlaybackRate = 0.75 | 1 | 1.5;
 
 const STAGE_WIDTH = 1000;
@@ -45,6 +56,10 @@ const BASE_STEP_DELAY_MS = 2850;
 const REDUCED_STEP_DELAY_MS = 2200;
 const ACTOR_ROUTE_RADIUS = 54;
 const PLAYBACK_RATES = [0.75, 1, 1.5] as const satisfies readonly PlaybackRate[];
+const TOKEN_REQUEST_INDEX = flowEvents.findIndex((event) => event.id === "token-request");
+const VERIFIER_CHECK_INDEX = flowEvents.findIndex((event) => event.id === "verifier-check");
+const TOKEN_RETURN_INDEX = flowEvents.findIndex((event) => event.id === "token-return");
+const FINAL_INDEX = flowEvents.length - 1;
 
 const actorPositions: Record<ActorId, Point> = {
   user: { x: 92, y: 335 },
@@ -297,28 +312,55 @@ function ProtocolStage({
   reducedMotion,
   playbackRate,
   replayKey,
+  experiment,
 }: {
   activeIndex: number;
   reducedMotion: boolean;
   playbackRate: PlaybackRate;
   replayKey: number;
+  experiment: VerifierExperimentView;
 }) {
   const activeEvent = flowEvents[activeIndex] ?? flowEvents[0];
   const activeRoute = getRouteGeometry(activeEvent);
   const teachingState = getPkceTeachingState(activeEvent.id);
   const browserLocation = getBrowserLocation(activeEvent.id);
+  const candidateEvaluation = experiment.candidate ? evaluateVerifierCandidate(experiment.candidate) : null;
+  const experimentAtTokenExchange =
+    experiment.active && (activeEvent.id === "token-request" || activeEvent.id === "verifier-check");
+  const experimentOutcome =
+    experiment.active && activeEvent.id === "verifier-check" && experiment.verified ? experiment.outcome : null;
+  const stageDescription = experimentOutcome
+    ? experimentOutcome.matches
+      ? "Token Endpoint は選択された code_verifier から導出した challenge と Authorization Code に関連付けられた challenge を比較し、一致したため処理を継続できます。"
+      : "Token Endpoint は選択された code_verifier から導出した challenge と Authorization Code に関連付けられた challenge を比較し、不一致のため invalid_grant を返して Access Token を発行しません。"
+    : teachingState.description;
   const bubbleStyle = {
     left: `${(activeRoute.bubble.x / STAGE_WIDTH) * 100}%`,
     top: `${(activeRoute.bubble.y / STAGE_HEIGHT) * 100}%`,
   } satisfies CSSProperties;
   const packetTravelMs = scaleDuration(BASE_PACKET_TRAVEL_MS, playbackRate);
-  const clientCue: ActorStateCue | undefined = teachingState.retainedVerifier
-    ? {
-        label: "保持中",
-        value: `code_verifier · ${teachingState.retainedVerifier}`,
-        ariaLabel: `Browser / App は code_verifier ${teachingState.retainedVerifier} を保持しています`,
-      }
-    : undefined;
+
+  let clientCue: ActorStateCue | undefined;
+  if (experimentAtTokenExchange) {
+    clientCue = candidateEvaluation
+      ? {
+          label: "送信候補",
+          value: `code_verifier · ${candidateEvaluation.receivedVerifier}`,
+          ariaLabel: `Verifier実験で送信候補として code_verifier ${candidateEvaluation.receivedVerifier} を選択しています`,
+        }
+      : {
+          label: "選択待ち",
+          value: "code_verifier · —",
+          ariaLabel: "Verifier実験でToken requestに使うcode_verifierの選択を待っています",
+        };
+  } else if (teachingState.retainedVerifier) {
+    clientCue = {
+      label: "保持中",
+      value: `code_verifier · ${teachingState.retainedVerifier}`,
+      ariaLabel: `Browser / App は code_verifier ${teachingState.retainedVerifier} を保持しています`,
+    };
+  }
+
   const authorizationCue: ActorStateCue | undefined = teachingState.authorizationChallenge
     ? teachingState.authorizationChallenge.status === "associated"
       ? {
@@ -333,19 +375,28 @@ function ProtocolStage({
         }
     : undefined;
 
+  let packetLabel = activeEvent.packetLabel;
+  if (experiment.active && activeEvent.id === "token-request" && candidateEvaluation) {
+    packetLabel = `POST /token · code + ${candidateEvaluation.receivedVerifier}`;
+  }
+  if (experimentOutcome) {
+    packetLabel = experimentOutcome.matches ? "S256(verifier) = challenge" : "S256(verifier) ≠ challenge";
+  }
+
   return (
     <section
       className="protocol-stage"
       aria-label="Authorization Code + PKCE 通信ステージ"
-      aria-describedby={teachingState.description ? "pkce-state-summary" : undefined}
+      aria-describedby={stageDescription ? "pkce-state-summary" : undefined}
       data-step={activeEvent.id}
       data-motion={reducedMotion ? "reduced" : "full"}
       data-playback-rate={playbackRate}
       data-replay-key={replayKey}
+      data-experiment={experiment.active ? "verifier" : "normal"}
     >
-      {teachingState.description ? (
+      {stageDescription ? (
         <p id="pkce-state-summary" className="sr-only" data-testid="pkce-state-summary">
-          {teachingState.description}
+          {stageDescription}
         </p>
       ) : null}
       <SystemBoundaryLayer />
@@ -446,9 +497,30 @@ function ProtocolStage({
         <small>架空URL例</small>
       </div>
 
-      {teachingState.verification ? (
+      {experimentOutcome ? (
         <div
-          className="verification-cue"
+          className={`verification-cue ${experimentOutcome.matches ? "is-success" : "is-failure"}`}
+          role="note"
+          aria-label={
+            experimentOutcome.matches
+              ? "Token Endpointでcode_verifierから計算したchallengeとAuthorization Codeに関連付けられたchallengeを比較し、一致しています"
+              : "Token Endpointでcode_verifierから計算したchallengeとAuthorization Codeに関連付けられたchallengeを比較し、不一致のためinvalid_grantでAccess Tokenを発行しません"
+          }
+          data-testid="verification-cue"
+        >
+          <span>VERIFY</span>
+          <code>S256(received verifier) → {experimentOutcome.derivedChallenge}</code>
+          <code>
+            {experimentOutcome.associatedCode} ↔ {experimentOutcome.associatedChallenge}
+          </code>
+          <strong>{experimentOutcome.matches ? "✓ 一致" : "× 不一致"}</strong>
+          {experimentOutcome.error ? (
+            <code className="verification-error">{experimentOutcome.error} · Tokenを発行しない</code>
+          ) : null}
+        </div>
+      ) : !experiment.active && teachingState.verification ? (
+        <div
+          className="verification-cue is-success"
           role="note"
           aria-label="Token Endpointでcode_verifierから計算したchallengeとAuthorization Codeに関連付けられたchallengeを比較し、一致しています"
           data-testid="verification-cue"
@@ -458,13 +530,13 @@ function ProtocolStage({
           <code>
             {teachingState.verification.associatedCode} ↔ {teachingState.verification.associatedChallenge}
           </code>
-          <strong>一致</strong>
+          <strong>✓ 一致</strong>
         </div>
       ) : null}
 
       <div className={`flow-bubble tone-${activeEvent.tone}`} style={bubbleStyle} data-testid="flow-bubble">
         <strong>{activeEvent.bubble}</strong>
-        <code>{activeEvent.packetLabel}</code>
+        <code>{packetLabel}</code>
       </div>
     </section>
   );
@@ -534,7 +606,13 @@ function LessonToolbar({
   );
 }
 
-function CompletionRecap({ onRestart }: { onRestart: () => void }) {
+function CompletionRecap({
+  onRestart,
+  onStartExperiment,
+}: {
+  onRestart: () => void;
+  onStartExperiment: () => void;
+}) {
   return (
     <section className="completion-recap" aria-label="レッスンの振り返り" data-testid="completion-recap">
       <div className="completion-title">
@@ -546,26 +624,144 @@ function CompletionRecap({ onRestart }: { onRestart: () => void }) {
         <li>Authorization Code はToken交換、Access Token はAPI呼び出しに使う</li>
         <li>verifier の照合は /token で行う</li>
       </ul>
-      <button type="button" onClick={onRestart}>
-        最初からもう一度
-      </button>
+      <div className="completion-actions">
+        <button type="button" className="experiment-entry" onClick={onStartExperiment}>
+          verifierを変えて試す
+        </button>
+        <button type="button" onClick={onRestart}>
+          最初からもう一度
+        </button>
+      </div>
     </section>
   );
 }
 
-function FlowTimeline({ activeIndex, onSelect }: { activeIndex: number; onSelect: (index: number) => void }) {
+function VerifierExperiment({
+  candidate,
+  verified,
+  outcome,
+  activeIndex,
+  onChooseCandidate,
+  onVerify,
+  onContinueSuccess,
+  onRestart,
+}: {
+  candidate: VerifierCandidateId | null;
+  verified: boolean;
+  outcome: VerifierEvaluation | null;
+  activeIndex: number;
+  onChooseCandidate: (candidate: VerifierCandidateId) => void;
+  onVerify: () => void;
+  onContinueSuccess: () => void;
+  onRestart: () => void;
+}) {
+  const candidateValue = candidate
+    ? evaluateVerifierCandidate(candidate).receivedVerifier
+    : null;
+
+  return (
+    <section className="verifier-experiment" aria-label="Verifier実験" data-testid="verifier-experiment">
+      <div className="experiment-heading">
+        <span>VERIFIER EXPERIMENT</span>
+        <strong>Token交換に使うverifierを変える</strong>
+      </div>
+
+      <fieldset className="candidate-picker">
+        <legend>送信するsynthetic verifier</legend>
+        <button
+          type="button"
+          className={candidate === "mismatch" ? "is-selected" : ""}
+          aria-pressed={candidate === "mismatch"}
+          onClick={() => onChooseCandidate("mismatch")}
+        >
+          <span>不一致 verifier</span>
+          <code>{pkceTeachingValues.mismatchVerifier}</code>
+        </button>
+        <button
+          type="button"
+          className={candidate === "correct" ? "is-selected" : ""}
+          aria-pressed={candidate === "correct"}
+          onClick={() => onChooseCandidate("correct")}
+        >
+          <span>正しい verifier</span>
+          <code>{pkceTeachingValues.verifier}</code>
+        </button>
+      </fieldset>
+
+      <div
+        className={`experiment-result ${outcome ? (outcome.matches ? "is-success" : "is-failure") : ""}`}
+        aria-live="polite"
+        data-testid="experiment-result"
+      >
+        {!candidate ? (
+          <span>どちらかのverifierを選んでToken Endpointへ送ります。</span>
+        ) : !verified ? (
+          <span>
+            送信候補: <code>{candidateValue}</code>
+          </span>
+        ) : outcome?.matches ? (
+          <>
+            <strong>✓ 一致</strong>
+            <span>Token発行へ進めます。</span>
+          </>
+        ) : (
+          <>
+            <strong>× 不一致</strong>
+            <code>invalid_grant</code>
+            <span>Access Tokenは発行されません。</span>
+          </>
+        )}
+      </div>
+
+      <div className="experiment-actions">
+        {!verified ? (
+          <button type="button" className="experiment-primary" onClick={onVerify} disabled={!candidate}>
+            送って照合する
+          </button>
+        ) : outcome?.matches && activeIndex === VERIFIER_CHECK_INDEX ? (
+          <button type="button" className="experiment-primary" onClick={onContinueSuccess}>
+            成功経路を続ける
+          </button>
+        ) : outcome && !outcome.matches ? (
+          <button type="button" className="experiment-primary" onClick={() => onChooseCandidate("correct")}>
+            正しい verifier に切り替える
+          </button>
+        ) : (
+          <span className="experiment-running">成功経路を再生中</span>
+        )}
+        <button type="button" onClick={onRestart}>
+          通常フローを最初から
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function FlowTimeline({
+  activeIndex,
+  onSelect,
+  minReachableIndex = 0,
+  maxReachableIndex = FINAL_INDEX,
+}: {
+  activeIndex: number;
+  onSelect: (index: number) => void;
+  minReachableIndex?: number;
+  maxReachableIndex?: number;
+}) {
   return (
     <nav className="timeline-scroll" aria-label="通信ステップ">
       <div className="flow-timeline">
         {flowEvents.map((event, index) => {
           const state = index < activeIndex ? "complete" : index === activeIndex ? "current" : "upcoming";
+          const disabled = index < minReachableIndex || index > maxReachableIndex;
           return (
             <button
               type="button"
               key={event.id}
-              className={`timeline-step is-${state}`}
+              className={`timeline-step is-${state} ${disabled ? "is-disabled" : ""}`}
               aria-current={index === activeIndex ? "step" : undefined}
               aria-label={`Step ${index + 1}: ${event.timelineLabel}`}
+              disabled={disabled}
               onClick={() => onSelect(index)}
             >
               <span className="timeline-dot" aria-hidden="true" />
@@ -583,15 +779,38 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(true);
   const [playbackRate, setPlaybackRate] = useState<PlaybackRate>(1);
   const [replayKey, setReplayKey] = useState(0);
+  const [experimentMode, setExperimentMode] = useState(false);
+  const [experimentCandidate, setExperimentCandidate] = useState<VerifierCandidateId | null>(null);
+  const [experimentVerified, setExperimentVerified] = useState(false);
   const stageScrollRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
   const activeEvent = flowEvents[activeIndex] ?? flowEvents[0];
-  const canAdvance = activeIndex < flowEvents.length - 1;
+  const experimentOutcome =
+    experimentCandidate && experimentVerified ? evaluateVerifierCandidate(experimentCandidate) : null;
+  const normalCanAdvance = activeIndex < FINAL_INDEX;
+  const experimentCanAdvance =
+    experimentMode &&
+    experimentVerified &&
+    experimentOutcome?.matches === true &&
+    activeIndex >= VERIFIER_CHECK_INDEX &&
+    activeIndex < FINAL_INDEX;
+  const canAdvance = experimentMode ? experimentCanAdvance : normalCanAdvance;
   const playing = isPlaying && canAdvance;
-  const completed = !canAdvance;
+  const completed = !experimentMode && activeIndex === FINAL_INDEX;
+  const canAutoAdvance =
+    !experimentMode ||
+    (experimentVerified && experimentOutcome?.matches === true && activeIndex >= VERIFIER_CHECK_INDEX);
+  const experimentMinReachableIndex = experimentMode ? TOKEN_REQUEST_INDEX : 0;
+  const experimentMaxReachableIndex = !experimentMode
+    ? FINAL_INDEX
+    : !experimentVerified
+      ? TOKEN_REQUEST_INDEX
+      : experimentOutcome?.matches
+        ? FINAL_INDEX
+        : VERIFIER_CHECK_INDEX;
 
   useEffect(() => {
-    if (!isPlaying || activeIndex >= flowEvents.length - 1) return;
+    if (!isPlaying || activeIndex >= FINAL_INDEX || !canAutoAdvance) return;
 
     const baseDelay = reducedMotion ? REDUCED_STEP_DELAY_MS : BASE_STEP_DELAY_MS;
     const timer = window.setTimeout(() => {
@@ -600,9 +819,26 @@ function App() {
     }, scaleDuration(baseDelay, playbackRate));
 
     return () => window.clearTimeout(timer);
-  }, [activeIndex, isPlaying, playbackRate, reducedMotion]);
+  }, [activeIndex, canAutoAdvance, isPlaying, playbackRate, reducedMotion]);
+
+  const scrollToEvent = (event: FlowEvent) => {
+    const scroller = stageScrollRef.current;
+    if (!scroller) return;
+
+    const source = actorPositions[event.from];
+    const target = actorPositions[event.to];
+    const centerX = (source.x + target.x) / 2;
+    const desiredLeft = (centerX / STAGE_WIDTH) * scroller.scrollWidth - scroller.clientWidth / 2;
+    const maxLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+
+    scroller.scrollTo({
+      left: Math.min(maxLeft, Math.max(0, desiredLeft)),
+      behavior: reducedMotion ? "auto" : "smooth",
+    });
+  };
 
   const selectStep = (index: number) => {
+    if (index < experimentMinReachableIndex || index > experimentMaxReachableIndex) return;
     setIsPlaying(false);
     setActiveIndex(index);
     setReplayKey((current) => current + 1);
@@ -614,6 +850,9 @@ function App() {
   };
 
   const restart = () => {
+    setExperimentMode(false);
+    setExperimentCandidate(null);
+    setExperimentVerified(false);
     setActiveIndex(0);
     setIsPlaying(true);
     setReplayKey((current) => current + 1);
@@ -625,19 +864,47 @@ function App() {
   };
 
   const focusCurrentCommunication = () => {
-    const scroller = stageScrollRef.current;
-    if (!scroller) return;
+    scrollToEvent(activeEvent);
+  };
 
-    const source = actorPositions[activeEvent.from];
-    const target = actorPositions[activeEvent.to];
-    const centerX = (source.x + target.x) / 2;
-    const desiredLeft = (centerX / STAGE_WIDTH) * scroller.scrollWidth - scroller.clientWidth / 2;
-    const maxLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+  const startVerifierExperiment = () => {
+    const tokenRequest = flowEvents[TOKEN_REQUEST_INDEX];
+    setExperimentMode(true);
+    setExperimentCandidate(null);
+    setExperimentVerified(false);
+    setActiveIndex(TOKEN_REQUEST_INDEX);
+    setIsPlaying(false);
+    setReplayKey((current) => current + 1);
+    scrollToEvent(tokenRequest);
+  };
 
-    scroller.scrollTo({
-      left: Math.min(maxLeft, Math.max(0, desiredLeft)),
-      behavior: reducedMotion ? "auto" : "smooth",
-    });
+  const chooseVerifierCandidate = (candidate: VerifierCandidateId) => {
+    const tokenRequest = flowEvents[TOKEN_REQUEST_INDEX];
+    setExperimentCandidate(candidate);
+    setExperimentVerified(false);
+    setActiveIndex(TOKEN_REQUEST_INDEX);
+    setIsPlaying(false);
+    setReplayKey((current) => current + 1);
+    scrollToEvent(tokenRequest);
+  };
+
+  const verifyExperimentCandidate = () => {
+    if (!experimentCandidate) return;
+    const verifierCheck = flowEvents[VERIFIER_CHECK_INDEX];
+    setExperimentVerified(true);
+    setActiveIndex(VERIFIER_CHECK_INDEX);
+    setIsPlaying(false);
+    setReplayKey((current) => current + 1);
+    scrollToEvent(verifierCheck);
+  };
+
+  const continueExperimentSuccess = () => {
+    if (!experimentOutcome?.matches) return;
+    const tokenReturn = flowEvents[TOKEN_RETURN_INDEX];
+    setActiveIndex(TOKEN_RETURN_INDEX);
+    setIsPlaying(true);
+    setReplayKey((current) => current + 1);
+    scrollToEvent(tokenReturn);
   };
 
   return (
@@ -672,12 +939,37 @@ function App() {
           reducedMotion={reducedMotion}
           playbackRate={playbackRate}
           replayKey={replayKey}
+          experiment={{
+            active: experimentMode,
+            candidate: experimentCandidate,
+            verified: experimentVerified,
+            outcome: experimentOutcome,
+          }}
         />
       </div>
 
       <footer className="lesson-footer">
-        {completed ? <CompletionRecap onRestart={restart} /> : null}
-        <FlowTimeline activeIndex={activeIndex} onSelect={selectStep} />
+        {completed ? (
+          <CompletionRecap onRestart={restart} onStartExperiment={startVerifierExperiment} />
+        ) : null}
+        {experimentMode ? (
+          <VerifierExperiment
+            candidate={experimentCandidate}
+            verified={experimentVerified}
+            outcome={experimentOutcome}
+            activeIndex={activeIndex}
+            onChooseCandidate={chooseVerifierCandidate}
+            onVerify={verifyExperimentCandidate}
+            onContinueSuccess={continueExperimentSuccess}
+            onRestart={restart}
+          />
+        ) : null}
+        <FlowTimeline
+          activeIndex={activeIndex}
+          onSelect={selectStep}
+          minReachableIndex={experimentMinReachableIndex}
+          maxReachableIndex={experimentMaxReachableIndex}
+        />
       </footer>
     </main>
   );

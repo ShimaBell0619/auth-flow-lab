@@ -175,11 +175,14 @@ export const flowEvents = [
 ] as const satisfies readonly FlowEvent[];
 
 export type FlowEventId = (typeof flowEvents)[number]["id"];
+export type VerifierCandidateId = "correct" | "mismatch";
 
 export const pkceTeachingValues = {
   verifier: "vfy_demo_7K2",
   challenge: "chl_demo_Q9P",
   code: "AUTH_CODE",
+  mismatchVerifier: "vfy_demo_BAD",
+  mismatchChallenge: "chl_demo_X4M",
 } as const;
 
 export interface PkceTeachingState {
@@ -197,6 +200,16 @@ export interface PkceTeachingState {
     matches: true;
   };
   description?: string;
+}
+
+export interface VerifierEvaluation {
+  candidateId: VerifierCandidateId;
+  receivedVerifier: string;
+  derivedChallenge: string;
+  associatedCode: string;
+  associatedChallenge: string;
+  matches: boolean;
+  error: "invalid_grant" | null;
 }
 
 export interface BrowserLocationState {
@@ -277,6 +290,20 @@ export const getBrowserLocation = (eventId: FlowEventId): BrowserLocationState =
     label: "BROWSER · APP",
     display: "app.example.test/",
     ariaLabel: "架空のブラウザー表示例: クライアントアプリ",
+  };
+};
+
+export const evaluateVerifierCandidate = (candidateId: VerifierCandidateId): VerifierEvaluation => {
+  const matches = candidateId === "correct";
+
+  return {
+    candidateId,
+    receivedVerifier: matches ? pkceTeachingValues.verifier : pkceTeachingValues.mismatchVerifier,
+    derivedChallenge: matches ? pkceTeachingValues.challenge : pkceTeachingValues.mismatchChallenge,
+    associatedCode: pkceTeachingValues.code,
+    associatedChallenge: pkceTeachingValues.challenge,
+    matches,
+    error: matches ? null : "invalid_grant",
   };
 };
 
