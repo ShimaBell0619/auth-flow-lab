@@ -1,7 +1,8 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   actors,
   flowEvents,
+  getBrowserLocation,
   getPkceTeachingState,
   nextFlowIndex,
   type ActorId,
@@ -305,6 +306,7 @@ function ProtocolStage({
   const activeEvent = flowEvents[activeIndex] ?? flowEvents[0];
   const activeRoute = getRouteGeometry(activeEvent);
   const teachingState = getPkceTeachingState(activeEvent.id);
+  const browserLocation = getBrowserLocation(activeEvent.id);
   const bubbleStyle = {
     left: `${(activeRoute.bubble.x / STAGE_WIDTH) * 100}%`,
     top: `${(activeRoute.bubble.y / STAGE_HEIGHT) * 100}%`,
@@ -433,6 +435,17 @@ function ProtocolStage({
         })}
       </div>
 
+      <div
+        className={`browser-location-cue is-${browserLocation.stage}`}
+        role="note"
+        aria-label={browserLocation.ariaLabel}
+        data-testid="browser-location-cue"
+      >
+        <span>{browserLocation.label}</span>
+        <code>{browserLocation.display}</code>
+        <small>架空URL例</small>
+      </div>
+
       {teachingState.verification ? (
         <div
           className="verification-cue"
@@ -466,6 +479,7 @@ function LessonToolbar({
   onTogglePlayback,
   onRestart,
   onReplay,
+  onFocusCurrent,
   onPlaybackRateChange,
 }: {
   activeEvent: FlowEvent;
@@ -476,6 +490,7 @@ function LessonToolbar({
   onTogglePlayback: () => void;
   onRestart: () => void;
   onReplay: () => void;
+  onFocusCurrent: () => void;
   onPlaybackRateChange: (playbackRate: PlaybackRate) => void;
 }) {
   return (
@@ -493,6 +508,9 @@ function LessonToolbar({
         </button>
         <button type="button" onClick={onReplay}>
           この場面を再生
+        </button>
+        <button type="button" className="focus-current-button" onClick={onFocusCurrent}>
+          現在の通信へ
         </button>
         <button type="button" onClick={onRestart}>
           最初から
@@ -512,6 +530,25 @@ function LessonToolbar({
           </select>
         </label>
       </div>
+    </section>
+  );
+}
+
+function CompletionRecap({ onRestart }: { onRestart: () => void }) {
+  return (
+    <section className="completion-recap" aria-label="レッスンの振り返り" data-testid="completion-recap">
+      <div className="completion-title">
+        <strong>ここまでの要点</strong>
+        <span>PKCE normal flow</span>
+      </div>
+      <ul>
+        <li>verifier は /authorize に送らず、Client が保持する</li>
+        <li>Authorization Code はToken交換、Access Token はAPI呼び出しに使う</li>
+        <li>verifier の照合は /token で行う</li>
+      </ul>
+      <button type="button" onClick={onRestart}>
+        最初からもう一度
+      </button>
     </section>
   );
 }
@@ -546,10 +583,12 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(true);
   const [playbackRate, setPlaybackRate] = useState<PlaybackRate>(1);
   const [replayKey, setReplayKey] = useState(0);
+  const stageScrollRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
   const activeEvent = flowEvents[activeIndex] ?? flowEvents[0];
   const canAdvance = activeIndex < flowEvents.length - 1;
   const playing = isPlaying && canAdvance;
+  const completed = !canAdvance;
 
   useEffect(() => {
     if (!playing) return;
@@ -578,10 +617,27 @@ function App() {
     setActiveIndex(0);
     setIsPlaying(true);
     setReplayKey((current) => current + 1);
+    stageScrollRef.current?.scrollTo({ left: 0, behavior: reducedMotion ? "auto" : "smooth" });
   };
 
   const replayCurrentStep = () => {
     setReplayKey((current) => current + 1);
+  };
+
+  const focusCurrentCommunication = () => {
+    const scroller = stageScrollRef.current;
+    if (!scroller) return;
+
+    const source = actorPositions[activeEvent.from];
+    const target = actorPositions[activeEvent.to];
+    const centerX = (source.x + target.x) / 2;
+    const desiredLeft = (centerX / STAGE_WIDTH) * scroller.scrollWidth - scroller.clientWidth / 2;
+    const maxLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+
+    scroller.scrollTo({
+      left: Math.min(maxLeft, Math.max(0, desiredLeft)),
+      behavior: reducedMotion ? "auto" : "smooth",
+    });
   };
 
   return (
@@ -606,10 +662,11 @@ function App() {
         onTogglePlayback={togglePlayback}
         onRestart={restart}
         onReplay={replayCurrentStep}
+        onFocusCurrent={focusCurrentCommunication}
         onPlaybackRateChange={setPlaybackRate}
       />
 
-      <div className="stage-scroll">
+      <div className="stage-scroll" ref={stageScrollRef} data-testid="stage-scroll">
         <ProtocolStage
           activeIndex={activeIndex}
           reducedMotion={reducedMotion}
@@ -618,7 +675,10 @@ function App() {
         />
       </div>
 
-      <FlowTimeline activeIndex={activeIndex} onSelect={selectStep} />
+      <footer className="lesson-footer">
+        {completed ? <CompletionRecap onRestart={restart} /> : null}
+        <FlowTimeline activeIndex={activeIndex} onSelect={selectStep} />
+      </footer>
     </main>
   );
 }
