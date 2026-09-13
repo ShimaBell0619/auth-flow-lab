@@ -46,6 +46,43 @@ test("timeline selection shows the chosen event in the stage and leaves complete
   expect(await page.getByTestId("completed-trail").count()).toBe(7);
 });
 
+test("playback controls pause, resume from a selected step, and restart", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+
+  const stage = page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" });
+  await page.getByRole("button", { name: "一時停止" }).click();
+  await expect(stage).toHaveAttribute("data-step", "initiate");
+  await page.waitForTimeout(2400);
+  await expect(stage).toHaveAttribute("data-step", "initiate");
+
+  await page.getByRole("button", { name: "Step 9: Token Req" }).click();
+  await expect(page.getByText("TOKEN EXCHANGE", { exact: true })).toBeVisible();
+  await expect(page.getByText("9 / 13", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "再生", exact: true }).click();
+  await expect(stage).toHaveAttribute("data-step", "verifier-check", { timeout: 3000 });
+
+  await page.getByRole("button", { name: "最初から" }).click();
+  await expect(stage).toHaveAttribute("data-step", "initiate");
+  await expect(page.getByText("SCENARIO START", { exact: true })).toBeVisible();
+  await expect(page.getByText("1 / 13", { exact: true })).toBeVisible();
+});
+
+test("replay restarts the current packet and speed changes packet duration", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Step 9: Token Req" }).click();
+
+  const stage = page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" });
+  const beforeReplay = Number(await stage.getAttribute("data-replay-key"));
+  await page.getByRole("button", { name: "この場面を再生" }).click();
+  await expect(stage).toHaveAttribute("data-replay-key", String(beforeReplay + 1));
+
+  await page.getByLabel("再生速度").selectOption("1.5");
+  await expect(stage).toHaveAttribute("data-playback-rate", "1.5");
+  await expect(page.locator("animateMotion").first()).toHaveAttribute("dur", "1267ms");
+});
+
 test("full-motion mode contains an SVG packet motion for the active route", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
@@ -83,6 +120,21 @@ test("timeline steps are keyboard reachable in a logical sequence", async ({ pag
   await expect(page.getByRole("button", { name: "Step 2: Verifier" })).toBeFocused();
 });
 
+test("supporting labels are readable at the rendered baseline", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Step 1: Start" }).click();
+
+  const boundaryFontSize = await page.getByText("CLIENT DEVICE", { exact: true }).evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).fontSize),
+  );
+  const timelineFontSize = await page.getByText("Start", { exact: true }).evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).fontSize),
+  );
+
+  expect(boundaryFontSize).toBeGreaterThanOrEqual(12);
+  expect(timelineFontSize).toBeGreaterThanOrEqual(12);
+});
+
 test("narrow layouts keep the wide stage inside its own scroll surface", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto("/");
@@ -92,4 +144,5 @@ test("narrow layouts keep the wide stage inside its own scroll surface", async (
   );
   expect(overflow).toBeLessThanOrEqual(1);
   await expect(page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "レッスン再生操作" })).toBeVisible();
 });

@@ -28,10 +28,15 @@ interface SystemBoundary {
   height: number;
 }
 
+type PlaybackRate = 0.75 | 1 | 1.5;
+
 const STAGE_WIDTH = 1000;
 const STAGE_HEIGHT = 520;
-const PACKET_TRAVEL_MS = 1900;
+const BASE_PACKET_TRAVEL_MS = 1900;
+const BASE_STEP_DELAY_MS = 2850;
+const REDUCED_STEP_DELAY_MS = 2200;
 const ACTOR_ROUTE_RADIUS = 54;
+const PLAYBACK_RATES = [0.75, 1, 1.5] as const satisfies readonly PlaybackRate[];
 
 const actorPositions: Record<ActorId, Point> = {
   user: { x: 92, y: 335 },
@@ -84,6 +89,8 @@ const bubbleNudges: Record<string, Point> = {
 };
 
 const markerForTone = (tone: EventTone) => `url(#arrow-${tone})`;
+const scaleDuration = (durationMs: number, playbackRate: PlaybackRate) =>
+  Math.round(durationMs / playbackRate);
 
 const getRouteGeometry = (event: FlowEvent): RouteGeometry => {
   const sourceCenter = actorPositions[event.from];
@@ -263,13 +270,24 @@ function SystemBoundaryLayer() {
   );
 }
 
-function ProtocolStage({ activeIndex, reducedMotion }: { activeIndex: number; reducedMotion: boolean }) {
+function ProtocolStage({
+  activeIndex,
+  reducedMotion,
+  playbackRate,
+  replayKey,
+}: {
+  activeIndex: number;
+  reducedMotion: boolean;
+  playbackRate: PlaybackRate;
+  replayKey: number;
+}) {
   const activeEvent = flowEvents[activeIndex] ?? flowEvents[0];
   const activeRoute = getRouteGeometry(activeEvent);
   const bubbleStyle = {
     left: `${(activeRoute.bubble.x / STAGE_WIDTH) * 100}%`,
     top: `${(activeRoute.bubble.y / STAGE_HEIGHT) * 100}%`,
   } satisfies CSSProperties;
+  const packetTravelMs = scaleDuration(BASE_PACKET_TRAVEL_MS, playbackRate);
 
   return (
     <section
@@ -277,6 +295,8 @@ function ProtocolStage({ activeIndex, reducedMotion }: { activeIndex: number; re
       aria-label="Authorization Code + PKCE 通信ステージ"
       data-step={activeEvent.id}
       data-motion={reducedMotion ? "reduced" : "full"}
+      data-playback-rate={playbackRate}
+      data-replay-key={replayKey}
     >
       <SystemBoundaryLayer />
 
@@ -287,7 +307,15 @@ function ProtocolStage({ activeIndex, reducedMotion }: { activeIndex: number; re
         aria-hidden="true"
       >
         <defs>
-          <marker id="arrow-trail" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <marker
+            id="arrow-trail"
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="5"
+            markerHeight="5"
+            orient="auto-start-reverse"
+          >
             <path d="M 0 0 L 10 5 L 0 10 z" />
           </marker>
           {(["protocol", "challenge", "interaction", "success"] as const).map((tone) => (
@@ -321,7 +349,7 @@ function ProtocolStage({ activeIndex, reducedMotion }: { activeIndex: number; re
           );
         })}
 
-        <g key={`active-${activeEvent.id}`}>
+        <g key={`active-${activeEvent.id}-${playbackRate}-${replayKey}`}>
           <path
             d={activeRoute.path}
             className={`active-route tone-${activeEvent.tone} ${activeEvent.kind === "interaction" ? "is-interaction" : ""}`}
@@ -340,10 +368,10 @@ function ProtocolStage({ activeIndex, reducedMotion }: { activeIndex: number; re
           ) : (
             <g data-testid="active-packet">
               <circle r="15" className={`packet-halo tone-${activeEvent.tone}`}>
-                <animateMotion path={activeRoute.path} dur={`${PACKET_TRAVEL_MS}ms`} fill="freeze" />
+                <animateMotion path={activeRoute.path} dur={`${packetTravelMs}ms`} fill="freeze" />
               </circle>
               <circle r="5.5" className={`packet-core tone-${activeEvent.tone}`}>
-                <animateMotion path={activeRoute.path} dur={`${PACKET_TRAVEL_MS}ms`} fill="freeze" />
+                <animateMotion path={activeRoute.path} dur={`${packetTravelMs}ms`} fill="freeze" />
               </circle>
             </g>
           )}
@@ -359,6 +387,65 @@ function ProtocolStage({ activeIndex, reducedMotion }: { activeIndex: number; re
       <div className={`flow-bubble tone-${activeEvent.tone}`} style={bubbleStyle} data-testid="flow-bubble">
         <strong>{activeEvent.bubble}</strong>
         <code>{activeEvent.packetLabel}</code>
+      </div>
+    </section>
+  );
+}
+
+function LessonToolbar({
+  activeEvent,
+  activeIndex,
+  playing,
+  canAdvance,
+  playbackRate,
+  onTogglePlayback,
+  onRestart,
+  onReplay,
+  onPlaybackRateChange,
+}: {
+  activeEvent: FlowEvent;
+  activeIndex: number;
+  playing: boolean;
+  canAdvance: boolean;
+  playbackRate: PlaybackRate;
+  onTogglePlayback: () => void;
+  onRestart: () => void;
+  onReplay: () => void;
+  onPlaybackRateChange: (playbackRate: PlaybackRate) => void;
+}) {
+  return (
+    <section className="lesson-toolbar" aria-label="レッスン再生操作">
+      <div className="lesson-progress" aria-live="polite">
+        <strong>{activeEvent.phase}</strong>
+        <span>
+          {activeIndex + 1} / {flowEvents.length}
+        </span>
+      </div>
+
+      <div className="playback-controls">
+        <button type="button" onClick={onTogglePlayback} disabled={!canAdvance}>
+          {playing ? "一時停止" : "再生"}
+        </button>
+        <button type="button" onClick={onReplay}>
+          この場面を再生
+        </button>
+        <button type="button" onClick={onRestart}>
+          最初から
+        </button>
+        <label className="speed-control">
+          <span>速度</span>
+          <select
+            aria-label="再生速度"
+            value={playbackRate}
+            onChange={(event) => onPlaybackRateChange(Number(event.target.value) as PlaybackRate)}
+          >
+            {PLAYBACK_RATES.map((rate) => (
+              <option key={rate} value={rate}>
+                {rate}x
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
     </section>
   );
@@ -391,37 +478,79 @@ function FlowTimeline({ activeIndex, onSelect }: { activeIndex: number; onSelect
 
 function App() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [autoPlay, setAutoPlay] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [playbackRate, setPlaybackRate] = useState<PlaybackRate>(1);
+  const [replayKey, setReplayKey] = useState(0);
   const reducedMotion = useReducedMotion();
+  const activeEvent = flowEvents[activeIndex] ?? flowEvents[0];
+  const canAdvance = activeIndex < flowEvents.length - 1;
+  const playing = isPlaying && canAdvance;
 
   useEffect(() => {
-    if (!autoPlay || activeIndex >= flowEvents.length - 1) return;
+    if (!playing) return;
 
-    const delay = reducedMotion ? 2200 : 2850;
+    const baseDelay = reducedMotion ? REDUCED_STEP_DELAY_MS : BASE_STEP_DELAY_MS;
     const timer = window.setTimeout(() => {
       setActiveIndex((current) => nextFlowIndex(current));
-    }, delay);
+      setReplayKey((current) => current + 1);
+    }, scaleDuration(baseDelay, playbackRate));
 
     return () => window.clearTimeout(timer);
-  }, [activeIndex, autoPlay, reducedMotion]);
+  }, [playbackRate, playing, reducedMotion]);
 
   const selectStep = (index: number) => {
-    setAutoPlay(false);
+    setIsPlaying(false);
     setActiveIndex(index);
+    setReplayKey((current) => current + 1);
+  };
+
+  const togglePlayback = () => {
+    if (!canAdvance) return;
+    setIsPlaying((current) => !current);
+  };
+
+  const restart = () => {
+    setActiveIndex(0);
+    setIsPlaying(true);
+    setReplayKey((current) => current + 1);
+  };
+
+  const replayCurrentStep = () => {
+    setReplayKey((current) => current + 1);
   };
 
   return (
     <main className="app-shell">
       <header className="stage-header">
-        <span className="brand-mark" aria-hidden="true">A/</span>
+        <span className="brand-mark" aria-hidden="true">
+          A/
+        </span>
         <div>
           <p className="brand-name">AUTH FLOW LAB</p>
           <h1>Authorization Code + PKCE</h1>
+          <p className="lesson-purpose">誰が・何を・どの順番でやり取りするかを、動きで追います。</p>
         </div>
       </header>
 
+      <LessonToolbar
+        activeEvent={activeEvent}
+        activeIndex={activeIndex}
+        playing={playing}
+        canAdvance={canAdvance}
+        playbackRate={playbackRate}
+        onTogglePlayback={togglePlayback}
+        onRestart={restart}
+        onReplay={replayCurrentStep}
+        onPlaybackRateChange={setPlaybackRate}
+      />
+
       <div className="stage-scroll">
-        <ProtocolStage activeIndex={activeIndex} reducedMotion={reducedMotion} />
+        <ProtocolStage
+          activeIndex={activeIndex}
+          reducedMotion={reducedMotion}
+          playbackRate={playbackRate}
+          replayKey={replayKey}
+        />
       </div>
 
       <FlowTimeline activeIndex={activeIndex} onSelect={selectStep} />
