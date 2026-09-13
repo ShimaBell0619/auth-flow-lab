@@ -42,16 +42,18 @@ npm run test:e2e
 
 ## Hosting
 
-Hosting follows the adopted Web App Foundation v0.9.2 Vercel profile:
+Hosting follows Web App Foundation v0.10.0's explicit **On-demand Preview** profile:
 
-- ordinary feature/PR branches → no Vercel deployment; review through GitHub Actions CI and rendered UI-review artifacts;
-- explicitly selected PR HEAD → Fixed Staging through the trusted `staging` slot;
-- `staging` → the single Vercel hosted non-Production review surface;
+- ordinary feature/fix/PR branches → no Vercel deployment; normal review uses GitHub Actions CI and rendered UI-review artifacts;
+- when hosted browser review is useful, an eligible repository writer comments `/preview` on the PR;
+- the trusted workflow validates the exact PR HEAD, publishes a content-identical synthetic `preview/pr-N` source, and returns the real Vercel Preview application URL to the PR;
 - `main` → Vercel Production deployment.
 
-`vercel.json` uses slash-safe `"**": false` to disable Git deployment for ordinary branches, while `main` and `staging` are explicitly enabled. The Vite SPA fallback rewrite is preserved. `staging` is a mutable review slot, not release history. No parallel GitHub Pages or custom Vercel deployment path is maintained.
+`vercel.json` uses slash-safe `"**": false` to suppress ordinary branches, while only `main` and trusted `preview/**` refs are explicitly enabled. The Vite SPA fallback rewrite is preserved.
 
-The previous v0.9.0/v0.9.1 feature-Preview leak was caused by the old single-star minimatch rule, not by Vercel Branch Tracking. The v0.9.2 correction has now passed the real three-path smoke: Production and `staging` deploy successfully, while a slash-containing ordinary branch receives no Vercel status. See `docs/FOUNDATION.md` for the recorded evidence and the separate external Fixed Staging configuration boundary.
+This application does not require a fixed non-Production origin, so Foundation's optional Fixed Staging profile is not adopted. There is no parallel GitHub Pages or custom Vercel deployment path.
+
+See `docs/FOUNDATION.md` for Foundation provenance, trust boundaries, and provider verification evidence.
 
 ## Contracts
 
@@ -61,7 +63,7 @@ The previous v0.9.0/v0.9.1 feature-Preview leak was caused by the old single-sta
 - `docs/ARCHITECTURE.md` — technical and simulation boundaries
 - `docs/FOUNDATION.md` — Web App Foundation provenance and hosting profile
 
-This consumer currently adopts `web-app-foundation` **v0.9.2** at commit `d4a1c4ba018063a187621a00ab892af275ab20af`.
+This consumer adopts `web-app-foundation` **v0.10.0** at commit `007352e15fcc6f9620686d3b77e11e85341eac02`.
 
 ## Protocol references
 

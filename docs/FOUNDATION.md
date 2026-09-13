@@ -1,57 +1,56 @@
 # Foundation provenance
 
-- Adopted Foundation version: 0.9.2
-- Copied-rule/template commit: `d4a1c4ba018063a187621a00ab892af275ab20af`
-- Reusable workflow commit: `d4a1c4ba018063a187621a00ab892af275ab20af`
-- Adopted on: 2026-09-12
+- Adopted Foundation version: 0.10.0
+- Copied-rule/template commit: `007352e15fcc6f9620686d3b77e11e85341eac02`
+- Reusable workflow commit: `007352e15fcc6f9620686d3b77e11e85341eac02`
+- Adopted on: 2026-09-13
 - App-specific deviations:
   - none for the React + TypeScript + Vite + npm baseline;
   - the initial mock uses semantic native buttons rather than importing a primitive library because no dialog/menu/form interaction currently requires one;
-  - specialist CSS/SVG is used for the protocol-stage visualization as allowed by the primitive-first profile.
+  - specialist CSS/SVG is used for the protocol-stage visualization as allowed by the primitive-first profile;
+  - optional Fixed Staging is not adopted because this application has no stable non-Production origin requirement.
 
 ## Adopted guidance
 
-The repository derives its working rules from Foundation v0.9.2, including:
+The repository derives its working rules from Foundation v0.10.0, including:
 
 - `AGENTS.md` read order, context routing, issue-driven development, approval boundaries, mandatory self-review, and independent-review policy;
 - `docs/ai-implementation.md` for Chat-based implementation;
 - `docs/ui-implementation.md` for primitive-first UI layering;
 - `docs/ui-review.md` for rendered review;
 - `docs/adoption.md` for consumer provenance and reusable CI;
-- `docs/vercel.md` and `docs/vercel-fixed-staging.md` for the staging-only hosted-review model.
+- `docs/vercel.md` and `docs/vercel-on-demand-preview.md` for explicit hosted review.
 
 ## Hosting and deployment
 
-- Hosting follows the Foundation v0.9.2 `docs/vercel.md` profile.
-- Repository intent is source-controlled in `vercel.json`: `"**": false` suppresses ordinary branches including slash-containing names, while only `main` and `staging` are explicitly re-enabled.
-- `main` is the Production branch.
-- `staging` is the single mutable Fixed Staging hosted-review slot. It points directly at an explicitly selected same-repository PR HEAD and is not release or integration history.
-- Normal PR review uses GitHub Actions quality evidence and rendered UI-review artifacts. A hosted browser surface is requested explicitly through the Fixed Staging workflow only when needed.
-- The Fixed Staging request is read-only; the write-enabled publisher runs from trusted `main`, validates the selected PR, and uses compare-and-swap ref movement/cleanup from the adopted Foundation template.
+- Vercel Git Integration remains the deployment owner.
+- Repository intent is source-controlled in `vercel.json`: `"**": false` suppresses ordinary branches including slash-containing names, `main` is explicitly enabled for Production, and only trusted synthetic `preview/**` refs are enabled for non-Production hosted review.
+- Ordinary PR review uses GitHub Actions quality evidence and rendered UI-review artifacts. Hosted review is created only after an eligible repository writer comments `/preview` on an open same-repository PR targeting `main`.
+- The trusted Preview workflow resolves exact PR HEAD A, runs the pinned Foundation Web CI against A, revalidates that the PR still points to A, then publishes a synthetic child B where `parent(B)=A`, `tree(B)=tree(A)`, and `diff(A,B)` is empty.
+- Vercel builds `preview/pr-N`. A Vercel `vercel.deployment.success` repository-dispatch event is accepted only after project/ref/SHA/PR/provenance checks, then the real generated `*.vercel.app` application URL is returned to the PR.
+- Preview branches are removed on PR close only when the current branch retains the expected Foundation ownership marker; ref mutation and cleanup use force-with-lease semantics.
+- Preview executes PR code and must not receive Production credentials or privileged Production state.
+- The Vite SPA fallback rewrite remains enabled.
 - GitHub Actions does not maintain a parallel GitHub Pages or custom Vercel deployment workflow.
 
-### Vercel adoption evidence
+## Fixed Staging retirement
 
-The earlier v0.9.0/v0.9.1 suppression failure is now understood.
+Foundation v0.10.0 keeps Fixed Staging as an optional profile for applications that genuinely require a stable origin, such as OAuth or webhook integrations. `auth-flow-lab` has no such current requirement, so its previous `staging` request/publisher/cleanup machinery is removed rather than carried forward for compatibility.
 
-Observed repository/provider evidence before the correction:
+The earlier Issue #20 requirement to configure `FIXED_STAGING_URL` is therefore superseded by this adoption. No stable `staging` origin or `FIXED_STAGING_URL` repository variable is required by the active hosting contract.
 
-- v0.9.0 bootstrap main SHA: `b2967d4056ad1fa76c62dba67702133ae90c11ea`;
-- disposable slash-containing feature smoke SHA: `b53a52d28445c97352efb87efbe9bce4a8dfa972`;
-- that feature branch still received a successful Vercel deployment under the old `"*": false` policy;
-- Vercel Project Preview Branch Tracking was confirmed enabled;
-- Vercel Project Production Branch Tracking was confirmed as `main`.
+## Provider evidence and history
 
-Therefore disabled Branch Tracking was not the cause in this project. Foundation v0.9.2 corrected the repository rule to slash-safe minimatch globstar `"**": false`; plain `*` does not span `/`, so common branches such as `feature/foo` and `chore/...` previously fell through to Vercel's default deployment-enabled behavior.
+Foundation v0.9.2 previously proved the slash-safe deployment suppression contract in this real project: Production and `staging` deployed successfully while a disposable slash-containing ordinary branch received no Vercel deployment status. The old v0.9.0/v0.9.1 failure was caused by using `"*": false`; plain `*` did not span `/` and ordinary branches such as `feature/foo` fell through to Vercel's default deployment-enabled behavior.
 
-The corrected policy was then verified against the real project:
+Before Foundation v0.10.0 was released, `auth-flow-lab` also served as the transport PoC for On-demand Preview. It proved that moving an already-seen exact PR HEAD was insufficient to request a fresh hosted Preview in this project, while a content-identical synthetic child commit generated a new Vercel Git event. Vercel then emitted `vercel.deployment.success` containing project/ref/SHA/application-URL metadata, allowing trusted GitHub Actions to return the real Preview application URL without a Vercel API token.
 
-1. **`main` / Production** — v0.9.2 adoption merged at `b0c51796f9b56a27c1e9421b95d2df8dccc7ad3e`; main CI #47 succeeded and Vercel Production deployment completed successfully.
-2. **`staging` / hosted review** — moving `staging` from `b2967d4056ad1fa76c62dba67702133ae90c11ea` to `b0c51796f9b56a27c1e9421b95d2df8dccc7ad3e` created a distinct Vercel deployment, which completed successfully.
-3. **ordinary slash-containing branch / suppressed** — tree-identical smoke commit `98738ba9c5418442a8d33daaabc97c58dcbed54e` on `smoke/vercel-globstar-0.9.2` was checked repeatedly after push and received no Vercel commit status.
+The v0.10.0 consumer adoption is complete only after its post-merge provider smoke confirms all active paths on the released profile:
 
-This proves the repository/Vercel branch-eligibility contract intended by Foundation v0.9.2: automatic hosted deployments are limited to `main` and `staging`, while ordinary slash-containing branches are suppressed.
+1. an ordinary disposable slash-containing branch receives no Vercel deployment/status;
+2. an open same-repository PR accepts `/preview`, exact-source CI succeeds, Vercel builds `preview/pr-N`, and the validated real application URL is returned to the PR;
+3. `main` continues to deploy successfully to Production.
 
-The stable Vercel Branch Domain/custom domain for `staging` and the GitHub repository variable `FIXED_STAGING_URL` are separate external Fixed Staging configuration. The connected GitHub surface does not expose repository variable values or Vercel custom-domain configuration, so those values were not independently re-verified by this smoke.
+Final smoke evidence is recorded in the adoption Issue/PR after the profile is present on `main`.
 
 Copied rules do not update automatically. Foundation upgrades must be deliberate and preserve app-specific product/design decisions unless the product owner approves a change.
