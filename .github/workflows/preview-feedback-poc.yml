@@ -104,28 +104,83 @@ jobs:
             echo "- Verified: \`parent(B)=A\`, \`tree(B)=tree(A)\`, empty diff"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  observe-vercel-success:
+  notify-vercel-success:
     if: ${{ github.event_name == 'repository_dispatch' }}
     permissions:
       contents: read
+      issues: write
+      pull-requests: read
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 3
     env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
       PAYLOAD: ${{ toJSON(github.event.client_payload) }}
     steps:
-      - name: Record observed Vercel payload
+      - name: Validate deployment and comment real Preview URL
         shell: bash
         run: |
           set -euo pipefail
-          {
-            echo '## Observed Vercel repository_dispatch payload'
-            echo
-            echo '```json'
-            jq . <<<"$PAYLOAD"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
 
-          echo 'Observed payload keys:'
-          jq -r 'keys[]' <<<"$PAYLOAD"
-          echo 'Documented deployment URL field:'
-          jq -r '.url // empty' <<<"$PAYLOAD"
+          environment="$(jq -r '.environment // empty' <<<"$PAYLOAD")"
+          project_name="$(jq -r '.project.name // empty' <<<"$PAYLOAD")"
+          state="$(jq -r '.state.type // empty' <<<"$PAYLOAD")"
+          preview_ref="$(jq -r '.git.ref // empty' <<<"$PAYLOAD")"
+          synthetic_sha="$(jq -r '.git.sha // empty' <<<"$PAYLOAD")"
+          preview_url="$(jq -r '.url // empty' <<<"$PAYLOAD")"
+          deployment_id="$(jq -r '.id // empty' <<<"$PAYLOAD")"
+          branch_alias="$(jq -r '.alias[0] // empty' <<<"$PAYLOAD")"
+
+          [[ "$environment" == 'preview' ]]
+          [[ "$project_name" == 'auth-flow-lab' ]]
+          [[ "$state" == 'success' ]]
+          [[ "$preview_ref" =~ ^preview/pr-([0-9]+)$ ]]
+          pr_number="${BASH_REMATCH[1]}"
+          [[ "$synthetic_sha" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$preview_url" =~ ^https://[A-Za-z0-9.-]+\.vercel\.app$ ]]
+
+          pr_json="$(gh api "repos/$REPOSITORY/pulls/$pr_number")"
+          [[ "$(jq -r '.state' <<<"$pr_json")" == 'open' ]]
+          [[ "$(jq -r '.base.repo.full_name' <<<"$pr_json")" == "$REPOSITORY" ]]
+          [[ "$(jq -r '.base.ref' <<<"$pr_json")" == 'main' ]]
+          [[ "$(jq -r '.head.repo.full_name' <<<"$pr_json")" == "$REPOSITORY" ]]
+          source_sha="$(jq -r '.head.sha' <<<"$pr_json")"
+
+          current_preview_sha="$(gh api "repos/$REPOSITORY/git/ref/heads/$preview_ref" --jq '.object.sha')"
+          [[ "$current_preview_sha" == "$synthetic_sha" ]]
+
+          synthetic_json="$(gh api "repos/$REPOSITORY/git/commits/$synthetic_sha")"
+          [[ "$(jq '.parents | length' <<<"$synthetic_json")" -eq 1 ]]
+          [[ "$(jq -r '.parents[0].sha' <<<"$synthetic_json")" == "$source_sha" ]]
+          synthetic_tree="$(jq -r '.tree.sha' <<<"$synthetic_json")"
+          [[ "$(jq -r '.message' <<<"$synthetic_json")" == *"Source-PR-HEAD: $source_sha"* ]]
+
+          source_tree="$(gh api "repos/$REPOSITORY/git/commits/$source_sha" --jq '.tree.sha')"
+          [[ "$synthetic_tree" == "$source_tree" ]]
+
+          body=$(cat <<EOF
+          Preview ready.
+
+          - URL: $preview_url
+          - Source: \`${source_sha:0:7}\`
+          - Deployment commit: \`${synthetic_sha:0:7}\`
+          - Branch: \`$preview_ref\`
+          - Vercel deployment: \`$deployment_id\`
+          EOF
+          )
+          if [[ -n "$branch_alias" ]]; then
+            body+=$'\n'
+            body+="Branch URL: https://$branch_alias"
+          fi
+
+          gh api --method POST "repos/$REPOSITORY/issues/$pr_number/comments" -f body="$body" >/dev/null
+
+          {
+            echo '## Preview feedback verified'
+            echo
+            echo "- PR: #$pr_number"
+            echo "- Source A: \`$source_sha\`"
+            echo "- Synthetic B: \`$synthetic_sha\`"
+            echo "- URL: $preview_url"
+            echo "- Ref: \`$preview_ref\`"
+          } >> "$GITHUB_STEP_SUMMARY"
