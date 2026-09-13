@@ -173,6 +173,7 @@ test("final response shows a compact recap and can restart the lesson", async ({
   await expect(recap).toContainText("verifier は /authorize に送らず");
   await expect(recap).toContainText("Authorization Code はToken交換");
   await expect(recap).toContainText("verifier の照合は /token");
+  await expect(page.getByRole("button", { name: "verifierを変えて試す" })).toBeVisible();
 
   await page.getByRole("button", { name: "最初からもう一度" }).click();
   await expect(page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" })).toHaveAttribute(
@@ -180,6 +181,56 @@ test("final response shows a compact recap and can restart the lesson", async ({
     "initiate",
   );
   await expect(recap).toHaveCount(0);
+});
+
+test("mismatched verifier stops at verification with invalid_grant and no token path", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Step 13: Response" }).click();
+  await page.getByRole("button", { name: "verifierを変えて試す" }).click();
+
+  const stage = page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" });
+  await expect(stage).toHaveAttribute("data-experiment", "verifier");
+  await expect(stage).toHaveAttribute("data-step", "token-request");
+  await expect(page.getByRole("button", { name: "Step 10: Verify" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Step 11: Token" })).toBeDisabled();
+
+  await page.getByRole("button", { name: /不一致 verifier/ }).click();
+  await expect(page.getByTestId("state-cue-client")).toContainText("vfy_demo_BAD");
+  await page.getByRole("button", { name: "送って照合する" }).click();
+
+  await expect(stage).toHaveAttribute("data-step", "verifier-check");
+  await expect(page.getByTestId("verification-cue")).toContainText("S256(received verifier) → chl_demo_X4M");
+  await expect(page.getByTestId("verification-cue")).toContainText("× 不一致");
+  await expect(page.getByTestId("verification-cue")).toContainText("invalid_grant");
+  await expect(page.getByTestId("verification-cue")).toContainText("Tokenを発行しない");
+  await expect(page.getByTestId("experiment-result")).toContainText("Access Tokenは発行されません");
+  await expect(page.getByRole("button", { name: "Step 11: Token" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Step 12: API" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Step 13: Response" })).toBeDisabled();
+  await expect(page.getByTestId("flow-bubble")).not.toContainText("Access Token を発行");
+});
+
+test("switching back to the correct verifier allows the success path again", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Step 13: Response" }).click();
+  await page.getByRole("button", { name: "verifierを変えて試す" }).click();
+  await page.getByRole("button", { name: /不一致 verifier/ }).click();
+  await page.getByRole("button", { name: "送って照合する" }).click();
+  await expect(page.getByTestId("experiment-result")).toContainText("× 不一致");
+
+  await page.getByRole("button", { name: "正しい verifier に切り替える" }).click();
+  const stage = page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" });
+  await expect(stage).toHaveAttribute("data-step", "token-request");
+  await expect(page.getByTestId("state-cue-client")).toContainText("vfy_demo_7K2");
+
+  await page.getByRole("button", { name: "送って照合する" }).click();
+  await expect(page.getByTestId("verification-cue")).toContainText("✓ 一致");
+  await expect(page.getByRole("button", { name: "Step 11: Token" })).toBeEnabled();
+  await page.getByRole("button", { name: "成功経路を続ける" }).click();
+  await expect(stage).toHaveAttribute("data-step", "token-return");
+  await expect(page.getByTestId("flow-bubble")).toContainText("Access Token を発行");
 });
 
 test("timeline steps are keyboard reachable in a logical sequence", async ({ page }) => {
@@ -219,10 +270,14 @@ test("narrow layout can return to the active communication without forced auto-f
   expect(await stageScroll.evaluate((element) => element.scrollLeft)).toBeGreaterThan(200);
 });
 
-test("narrow layouts keep PKCE state cues inside the contained stage", async ({ page }) => {
+test("narrow layouts keep experiment controls and stage cues contained", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.getByRole("button", { name: "Step 10: Verify" }).click();
+  await page.getByRole("button", { name: "Step 13: Response" }).click();
+  await page.getByRole("button", { name: "verifierを変えて試す" }).click();
+  await page.getByRole("button", { name: /不一致 verifier/ }).click();
+  await page.getByRole("button", { name: "送って照合する" }).click();
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -230,6 +285,7 @@ test("narrow layouts keep PKCE state cues inside the contained stage", async ({ 
   expect(overflow).toBeLessThanOrEqual(1);
   await expect(page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" })).toBeVisible();
   await expect(page.getByRole("region", { name: "レッスン再生操作" })).toBeVisible();
+  await expect(page.getByTestId("verifier-experiment")).toBeVisible();
   await expect(page.getByTestId("verification-cue")).toBeVisible();
   await expect(page.getByTestId("browser-location-cue")).toBeVisible();
 });

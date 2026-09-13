@@ -16,6 +16,7 @@
   --challenge: #7c3aed;
   --interaction: #475467;
   --success: #15803d;
+  --failure: #b42318;
   --focus: #1d4ed8;
 }
 
@@ -364,7 +365,15 @@ select:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
 .verification-cue strong { display: block; }
 .verification-cue span { font: 850 0.68rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 0.08em; }
 .verification-cue code { margin-top: 4px; color: #4c1d95; font: 750 0.72rem/1.25 ui-monospace, SFMono-Regular, Consolas, monospace; }
-.verification-cue strong { margin-top: 5px; color: var(--success); font-size: 0.75rem; }
+.verification-cue strong { margin-top: 5px; font-size: 0.75rem; }
+.verification-cue.is-success strong { color: var(--success); }
+.verification-cue.is-failure {
+  border-color: #f7b4ad;
+  box-shadow: 0 8px 20px rgba(180, 35, 24, 0.08);
+}
+.verification-cue.is-failure strong,
+.verification-cue .verification-error { color: var(--failure); }
+.verification-cue .verification-error { font-weight: 850; }
 
 .flow-bubble {
   position: absolute;
@@ -446,7 +455,15 @@ select:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
   color: var(--success);
   font-weight: 900;
 }
-.completion-recap button {
+.completion-actions,
+.experiment-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.completion-recap button,
+.verifier-experiment button {
   min-height: 32px;
   padding: 6px 10px;
   color: #344054;
@@ -456,9 +473,113 @@ select:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
   font-size: 0.72rem;
   font-weight: 780;
   cursor: pointer;
+}
+.completion-recap button:hover,
+.verifier-experiment button:hover:not(:disabled) { border-color: #98a2b3; color: var(--ink); }
+.completion-recap .experiment-entry {
+  color: var(--challenge);
+  border-color: #c4b5fd;
+}
+
+.verifier-experiment {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(300px, 1fr) minmax(210px, 0.7fr) auto;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 10px clamp(18px, 2.4vw, 36px);
+  border-top: 1px solid #ddd6fe;
+  background: #faf9ff;
+}
+.experiment-heading span,
+.experiment-heading strong { display: block; }
+.experiment-heading span {
+  color: var(--challenge);
+  font: 850 0.62rem/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: 0.07em;
+}
+.experiment-heading strong {
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 0.78rem;
   white-space: nowrap;
 }
-.completion-recap button:hover { border-color: #98a2b3; color: var(--ink); }
+.candidate-picker {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.candidate-picker legend {
+  width: 100%;
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 760;
+}
+.candidate-picker button {
+  min-width: 128px;
+  text-align: left;
+}
+.candidate-picker button span,
+.candidate-picker button code { display: block; }
+.candidate-picker button span { font-size: 0.7rem; }
+.candidate-picker button code {
+  margin-top: 2px;
+  color: var(--muted);
+  font: 700 0.66rem/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.candidate-picker button.is-selected {
+  color: #5b21b6;
+  background: #fff;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px #ede9fe;
+}
+.candidate-picker button.is-selected code { color: #6d28d9; }
+.experiment-result {
+  min-width: 0;
+  padding: 7px 9px;
+  color: #475467;
+  background: #fff;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+.experiment-result strong,
+.experiment-result span,
+.experiment-result code { display: block; }
+.experiment-result code {
+  margin-top: 2px;
+  font: 800 0.68rem/1.25 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.experiment-result.is-success { border-color: #a9d6b7; }
+.experiment-result.is-success strong { color: var(--success); }
+.experiment-result.is-failure { border-color: #f7b4ad; }
+.experiment-result.is-failure strong,
+.experiment-result.is-failure code { color: var(--failure); }
+.verifier-experiment button:disabled {
+  color: #98a2b3;
+  background: #f9fafb;
+  cursor: not-allowed;
+}
+.experiment-primary {
+  color: #5b21b6 !important;
+  border-color: #c4b5fd !important;
+}
+.experiment-primary:disabled {
+  color: #98a2b3 !important;
+  border-color: var(--soft-strong) !important;
+}
+.experiment-running {
+  color: var(--success);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
 
 .timeline-scroll {
   min-width: 0;
@@ -509,7 +630,18 @@ select:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
 .timeline-step.is-complete .timeline-dot { background: #667085; }
 .timeline-step.is-current { color: var(--protocol); }
 .timeline-step.is-current .timeline-dot { transform: scale(1.45); background: var(--protocol); }
-.timeline-step:hover { color: #344054; }
+.timeline-step:hover:not(:disabled) { color: #344054; }
+.timeline-step.is-disabled,
+.timeline-step:disabled { color: #d0d5dd; cursor: not-allowed; }
+.timeline-step.is-disabled .timeline-dot { background: #fff; transform: none; }
+
+@media (max-width: 1100px) {
+  .verifier-experiment {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .experiment-result { grid-column: 2 / 3; }
+  .experiment-actions { grid-column: 3 / 4; grid-row: 1 / 3; }
+}
 
 @media (max-width: 900px) {
   .app-shell { height: auto; min-height: 100dvh; overflow: visible; }
@@ -527,6 +659,15 @@ select:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
     padding: 9px 14px;
   }
   .completion-recap ul { grid-column: 1 / -1; }
+  .verifier-experiment {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    padding: 10px 14px;
+  }
+  .experiment-heading strong { white-space: normal; }
+  .candidate-picker,
+  .experiment-result,
+  .experiment-actions { grid-column: 1; grid-row: auto; }
 }
 
 @media (max-width: 480px) {
@@ -540,7 +681,10 @@ select:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 72%, w
   .speed-control { font-size: 0.7rem; }
   .completion-recap { gap: 7px 10px; }
   .completion-recap li { flex-basis: 100%; }
+  .completion-actions { grid-column: 1 / -1; }
   .completion-recap button { padding-inline: 8px; }
+  .candidate-picker button { flex: 1 1 100%; }
+  .experiment-actions button { flex: 1 1 auto; }
   .flow-timeline { padding-inline: 16px; }
 }
 
