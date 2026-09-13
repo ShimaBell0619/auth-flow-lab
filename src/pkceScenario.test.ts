@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   actors,
   flowEvents,
+  getBrowserLocation,
   getPkceTeachingState,
   nextFlowIndex,
   pkceTeachingValues,
@@ -87,6 +88,25 @@ describe("PKCE normal-flow model", () => {
 
   it("does not imply retained PKCE state after token issuance", () => {
     expect(getPkceTeachingState("token-return")).toEqual({});
+  });
+
+  it("shows the synthetic browser moving from the app to authorization UI and back to callback", () => {
+    expect(getBrowserLocation("initiate")).toMatchObject({
+      stage: "application",
+      display: "app.example.test/",
+    });
+    expect(getBrowserLocation("login-ui")).toMatchObject({
+      stage: "authorization",
+      display: "auth.example.test/authorize",
+    });
+    expect(getBrowserLocation("code-return")).toMatchObject({
+      stage: "callback",
+      display: "→ app.example.test/callback",
+    });
+    expect(getBrowserLocation("token-request")).toMatchObject({
+      stage: "callback",
+      display: "app.example.test/callback",
+    });
   });
 
   it("stops progression at the final event", () => {

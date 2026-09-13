@@ -57,7 +57,7 @@ Give those actors visible placement context without turning the stage into an in
 - `Protected API` sits inside a `RESOURCE SERVER` boundary.
 - Boundary boxes are visually secondary to packet motion and actor identity. They communicate protocol/responsibility grouping, not a required physical host count.
 
-At narrow widths, preserve the desktop geometry inside a contained horizontal scroll surface rather than collapsing the actors into an unrelated mobile composition. The document itself must not overflow horizontally.
+At narrow widths, preserve the desktop geometry inside a contained horizontal scroll surface rather than collapsing the actors into an unrelated mobile composition. The document itself must not overflow horizontally. Do not force the scroll position to follow every step; offer an explicit `現在の通信へ` action when the learner needs to recover the active route.
 
 ## Protocol-stage visualization
 
@@ -71,6 +71,8 @@ At narrow widths, preserve the desktop geometry inside a contained horizontal sc
 - Human interaction is visually distinct (for example a dotted route / hollow pulse) so it is not mistaken for a network packet.
 - Completed events remain as low-contrast directional trails. Upcoming routes are not pre-drawn.
 - Return traffic must be visible: login UI response, Authorization Code redirect, Access Token response, and API response all have their own event.
+- A compact browser-location cue may show the learner whether the synthetic Browser/App example is at the application, Authorization Server UI, or callback. It must be labeled as a teaching example and must not imply that client application code receives the user's Authorization Server credentials.
+- After the final API response, show only a compact 2–3 point recap tied to the normal flow. Do not navigate to a separate results/dashboard surface.
 
 ## In-stage bubble
 
@@ -101,6 +103,7 @@ Motion is functional and central to this lesson.
 - Use transform/SVG motion for the active packet rather than decorative looping effects.
 - Keep travel durations long enough to perceive direction but short enough to maintain flow.
 - `prefers-reduced-motion: reduce` must show the same active route, destination, bubble, and progress without travel animation.
+- Explicit orientation scrolling must use immediate movement rather than smooth motion when reduced motion is requested.
 
 ## Components
 

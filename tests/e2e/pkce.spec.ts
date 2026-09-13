@@ -70,6 +70,25 @@ test("retained verifier and code challenge association stay visible across depen
   await expect(page.getByTestId("pkce-state-summary")).toContainText("Authorization Code に関連付けられた code_challenge");
 });
 
+test("browser location cue distinguishes app, authorization UI, and callback", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Step 1: Start" }).click();
+  await expect(page.getByTestId("browser-location-cue")).toContainText("app.example.test/");
+
+  await page.getByRole("button", { name: "Step 5: Login UI" }).click();
+  await expect(page.getByTestId("browser-location-cue")).toContainText("auth.example.test/authorize");
+  await expect(page.getByTestId("browser-location-cue")).toHaveAttribute("aria-label", /Authorization Server/);
+
+  await page.getByRole("button", { name: "Step 8: Code" }).click();
+  await expect(page.getByTestId("browser-location-cue")).toContainText("→ app.example.test/callback");
+
+  await page.getByRole("button", { name: "Step 9: Token Req" }).click();
+  await expect(page.getByTestId("browser-location-cue")).toContainText("app.example.test/callback");
+  await expect(page.getByTestId("browser-location-cue")).toContainText("架空URL例");
+});
+
 test("playback controls pause, resume from a selected step, and restart", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -86,7 +105,7 @@ test("playback controls pause, resume from a selected step, and restart", async 
   await page.getByRole("button", { name: "再生", exact: true }).click();
   await expect(stage).toHaveAttribute("data-step", "verifier-check", { timeout: 3000 });
 
-  await page.getByRole("button", { name: "最初から" }).click();
+  await page.getByRole("button", { name: "最初から", exact: true }).click();
   await expect(stage).toHaveAttribute("data-step", "initiate");
   await expect(page.getByText("SCENARIO START", { exact: true })).toBeVisible();
   await expect(page.getByText("1 / 13", { exact: true })).toBeVisible();
@@ -134,6 +153,25 @@ test("reduced-motion mode preserves the selected route without packet travel", a
   await expect(page.getByTestId("flow-bubble")).toContainText("Access Token を発行");
 });
 
+test("final response shows a compact recap and can restart the lesson", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Step 13: Response" }).click();
+
+  const recap = page.getByTestId("completion-recap");
+  await expect(recap).toBeVisible();
+  await expect(recap).toContainText("verifier は /authorize に送らず");
+  await expect(recap).toContainText("Authorization Code はToken交換");
+  await expect(recap).toContainText("verifier の照合は /token");
+
+  await page.getByRole("button", { name: "最初からもう一度" }).click();
+  await expect(page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" })).toHaveAttribute(
+    "data-step",
+    "initiate",
+  );
+  await expect(recap).toHaveCount(0);
+});
+
 test("timeline steps are keyboard reachable in a logical sequence", async ({ page }) => {
   await page.goto("/");
 
@@ -159,6 +197,18 @@ test("supporting labels are readable at the rendered baseline", async ({ page })
   expect(timelineFontSize).toBeGreaterThanOrEqual(12);
 });
 
+test("narrow layout can return to the active communication without forced auto-follow", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Step 12: API" }).click();
+
+  const stageScroll = page.getByTestId("stage-scroll");
+  expect(await stageScroll.evaluate((element) => element.scrollLeft)).toBe(0);
+  await page.getByRole("button", { name: "現在の通信へ" }).click();
+  expect(await stageScroll.evaluate((element) => element.scrollLeft)).toBeGreaterThan(200);
+});
+
 test("narrow layouts keep PKCE state cues inside the contained stage", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto("/");
@@ -171,4 +221,5 @@ test("narrow layouts keep PKCE state cues inside the contained stage", async ({ 
   await expect(page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" })).toBeVisible();
   await expect(page.getByRole("region", { name: "レッスン再生操作" })).toBeVisible();
   await expect(page.getByTestId("verification-cue")).toBeVisible();
+  await expect(page.getByTestId("browser-location-cue")).toBeVisible();
 });
