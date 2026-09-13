@@ -1,6 +1,20 @@
 export type ActorId = "user" | "client" | "auth" | "token" | "api";
 export type EventKind = "local" | "interaction" | "request" | "response" | "redirect" | "success";
 export type EventTone = "protocol" | "challenge" | "interaction" | "success";
+export type FlowEventId =
+  | "initiate"
+  | "verifier"
+  | "challenge"
+  | "authorize"
+  | "login-ui"
+  | "user-interaction"
+  | "login-submit"
+  | "code-return"
+  | "token-request"
+  | "verifier-check"
+  | "token-return"
+  | "api-request"
+  | "api-response";
 
 export interface ProtocolActor {
   id: ActorId;
@@ -9,7 +23,7 @@ export interface ProtocolActor {
 }
 
 export interface FlowEvent {
-  id: string;
+  id: FlowEventId;
   phase: string;
   from: ActorId;
   to: ActorId;
@@ -28,7 +42,7 @@ export const actors = [
   { id: "api", name: "Protected API", role: "Resource Server" },
 ] as const satisfies readonly ProtocolActor[];
 
-export const flowEvents = [
+export const flowEvents: readonly FlowEvent[] = [
   {
     id: "initiate",
     phase: "SCENARIO START",
@@ -172,9 +186,8 @@ export const flowEvents = [
     bubble: "保護データを返す",
     timelineLabel: "Response",
   },
-] as const satisfies readonly FlowEvent[];
+];
 
-export type FlowEventId = (typeof flowEvents)[number]["id"];
 export type VerifierCandidateId = "correct" | "mismatch";
 
 export const pkceTeachingValues = {
