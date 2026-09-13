@@ -15,7 +15,9 @@ The first lesson teaches the **normal OAuth 2.0 Authorization Code + PKCE flow**
 - local PKCE operations visually distinguished from network exchange;
 - completed communication retained as faint directional trails;
 - one concise in-stage speech bubble for the current event;
-- one-time auto-play on load, then direct navigation from a compact bottom timeline;
+- one-time auto-play on load plus compact Play/Pause, replay-current, restart, and playback-speed controls;
+- current phase and `current / total` progress shown without turning the timeline into a wizard;
+- direct navigation from a compact bottom timeline;
 - no separate inspector, Story/Protocol/Wire switch, generic Next/Previous action deck, or PKCE ON/OFF comparison in the current slice;
 - keyboard-focus and reduced-motion support, with narrow layouts keeping the wide stage inside contained scroll surfaces.
 
