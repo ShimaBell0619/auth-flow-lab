@@ -105,11 +105,15 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   notify-vercel-success:
-    if: ${{ github.event_name == 'repository_dispatch' }}
+    if: >-
+      ${{ github.event_name == 'repository_dispatch' &&
+          github.event.client_payload.environment == 'preview' &&
+          github.event.client_payload.project.name == 'auth-flow-lab' &&
+          startsWith(github.event.client_payload.git.ref, 'preview/pr-') }}
     permissions:
       contents: read
       issues: write
-      pull-requests: read
+      pull-requests: write
     runs-on: ubuntu-latest
     timeout-minutes: 3
     env:
