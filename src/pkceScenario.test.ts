@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { actors, flowEvents, nextFlowIndex } from "./pkceScenario";
+import {
+  actors,
+  flowEvents,
+  getPkceTeachingState,
+  nextFlowIndex,
+  pkceTeachingValues,
+} from "./pkceScenario";
 
 describe("PKCE normal-flow model", () => {
   it("keeps one normal flow with five stable actors and no attacker branch", () => {
@@ -50,6 +56,37 @@ describe("PKCE normal-flow model", () => {
 
   it("keeps in-stage bubble copy concise", () => {
     expect(Math.max(...flowEvents.map((event) => event.bubble.length))).toBeLessThanOrEqual(32);
+  });
+
+  it("keeps the verifier with the client through the token request", () => {
+    expect(getPkceTeachingState("verifier").retainedVerifier).toBe(pkceTeachingValues.verifier);
+    expect(getPkceTeachingState("token-request").retainedVerifier).toBe(pkceTeachingValues.verifier);
+  });
+
+  it("distinguishes a received challenge from the later code/challenge association", () => {
+    expect(getPkceTeachingState("authorize").authorizationChallenge).toEqual({
+      status: "received",
+      challenge: pkceTeachingValues.challenge,
+    });
+    expect(getPkceTeachingState("code-return").authorizationChallenge).toEqual({
+      status: "associated",
+      challenge: pkceTeachingValues.challenge,
+      code: pkceTeachingValues.code,
+    });
+  });
+
+  it("shows verifier checking as a comparison against the challenge associated with the code", () => {
+    expect(getPkceTeachingState("verifier-check").verification).toEqual({
+      receivedVerifier: pkceTeachingValues.verifier,
+      derivedChallenge: pkceTeachingValues.challenge,
+      associatedCode: pkceTeachingValues.code,
+      associatedChallenge: pkceTeachingValues.challenge,
+      matches: true,
+    });
+  });
+
+  it("does not imply retained PKCE state after token issuance", () => {
+    expect(getPkceTeachingState("token-return")).toEqual({});
   });
 
   it("stops progression at the final event", () => {

@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import {
   actors,
   flowEvents,
+  getPkceTeachingState,
   nextFlowIndex,
   type ActorId,
   type EventTone,
@@ -26,6 +27,12 @@ interface SystemBoundary {
   y: number;
   width: number;
   height: number;
+}
+
+interface ActorStateCue {
+  label: string;
+  value: string;
+  ariaLabel: string;
 }
 
 type PlaybackRate = 0.75 | 1 | 1.5;
@@ -216,7 +223,15 @@ function ActorIcon({ actor }: { actor: ActorId }) {
   );
 }
 
-function ActorNode({ actor, activeEvent }: { actor: (typeof actors)[number]; activeEvent: FlowEvent }) {
+function ActorNode({
+  actor,
+  activeEvent,
+  stateCue,
+}: {
+  actor: (typeof actors)[number];
+  activeEvent: FlowEvent;
+  stateCue?: ActorStateCue;
+}) {
   const position = actorPositions[actor.id];
   const isSource = activeEvent.from === actor.id;
   const isTarget = activeEvent.to === actor.id;
@@ -240,6 +255,12 @@ function ActorNode({ actor, activeEvent }: { actor: (typeof actors)[number]; act
       </span>
       <strong>{actor.name}</strong>
       <small>{actor.role}</small>
+      {stateCue ? (
+        <div className="actor-state-cue" role="note" aria-label={stateCue.ariaLabel} data-testid={`state-cue-${actor.id}`}>
+          <span>{stateCue.label}</span>
+          <code>{stateCue.value}</code>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -283,21 +304,48 @@ function ProtocolStage({
 }) {
   const activeEvent = flowEvents[activeIndex] ?? flowEvents[0];
   const activeRoute = getRouteGeometry(activeEvent);
+  const teachingState = getPkceTeachingState(activeEvent.id);
   const bubbleStyle = {
     left: `${(activeRoute.bubble.x / STAGE_WIDTH) * 100}%`,
     top: `${(activeRoute.bubble.y / STAGE_HEIGHT) * 100}%`,
   } satisfies CSSProperties;
   const packetTravelMs = scaleDuration(BASE_PACKET_TRAVEL_MS, playbackRate);
+  const clientCue: ActorStateCue | undefined = teachingState.retainedVerifier
+    ? {
+        label: "保持中",
+        value: `code_verifier · ${teachingState.retainedVerifier}`,
+        ariaLabel: `Browser / App は code_verifier ${teachingState.retainedVerifier} を保持しています`,
+      }
+    : undefined;
+  const authorizationCue: ActorStateCue | undefined = teachingState.authorizationChallenge
+    ? teachingState.authorizationChallenge.status === "associated"
+      ? {
+          label: "Codeと関連",
+          value: `${teachingState.authorizationChallenge.code} ↔ ${teachingState.authorizationChallenge.challenge}`,
+          ariaLabel: `Authorization Server では ${teachingState.authorizationChallenge.code} と code_challenge ${teachingState.authorizationChallenge.challenge} が論理的に関連付けられています`,
+        }
+      : {
+          label: "受信済み",
+          value: `code_challenge · ${teachingState.authorizationChallenge.challenge}`,
+          ariaLabel: `Authorization Server は code_challenge ${teachingState.authorizationChallenge.challenge} を受信しています`,
+        }
+    : undefined;
 
   return (
     <section
       className="protocol-stage"
       aria-label="Authorization Code + PKCE 通信ステージ"
+      aria-describedby={teachingState.description ? "pkce-state-summary" : undefined}
       data-step={activeEvent.id}
       data-motion={reducedMotion ? "reduced" : "full"}
       data-playback-rate={playbackRate}
       data-replay-key={replayKey}
     >
+      {teachingState.description ? (
+        <p id="pkce-state-summary" className="sr-only" data-testid="pkce-state-summary">
+          {teachingState.description}
+        </p>
+      ) : null}
       <SystemBoundaryLayer />
 
       <svg
@@ -379,10 +427,27 @@ function ProtocolStage({
       </svg>
 
       <div className="actor-layer">
-        {actors.map((actor) => (
-          <ActorNode key={actor.id} actor={actor} activeEvent={activeEvent} />
-        ))}
+        {actors.map((actor) => {
+          const stateCue = actor.id === "client" ? clientCue : actor.id === "auth" ? authorizationCue : undefined;
+          return <ActorNode key={actor.id} actor={actor} activeEvent={activeEvent} stateCue={stateCue} />;
+        })}
       </div>
+
+      {teachingState.verification ? (
+        <div
+          className="verification-cue"
+          role="note"
+          aria-label="Token Endpointでcode_verifierから計算したchallengeとAuthorization Codeに関連付けられたchallengeを比較し、一致しています"
+          data-testid="verification-cue"
+        >
+          <span>VERIFY</span>
+          <code>S256(received verifier) → {teachingState.verification.derivedChallenge}</code>
+          <code>
+            {teachingState.verification.associatedCode} ↔ {teachingState.verification.associatedChallenge}
+          </code>
+          <strong>一致</strong>
+        </div>
+      ) : null}
 
       <div className={`flow-bubble tone-${activeEvent.tone}`} style={bubbleStyle} data-testid="flow-bubble">
         <strong>{activeEvent.bubble}</strong>

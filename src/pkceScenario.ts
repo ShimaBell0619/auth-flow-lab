@@ -174,5 +174,99 @@ export const flowEvents = [
   },
 ] as const satisfies readonly FlowEvent[];
 
+export type FlowEventId = (typeof flowEvents)[number]["id"];
+
+export const pkceTeachingValues = {
+  verifier: "vfy_demo_7K2",
+  challenge: "chl_demo_Q9P",
+  code: "AUTH_CODE",
+} as const;
+
+export interface PkceTeachingState {
+  retainedVerifier?: string;
+  authorizationChallenge?: {
+    status: "received" | "associated";
+    challenge: string;
+    code?: string;
+  };
+  verification?: {
+    receivedVerifier: string;
+    derivedChallenge: string;
+    associatedCode: string;
+    associatedChallenge: string;
+    matches: true;
+  };
+  description?: string;
+}
+
+const verifierRetentionEvents: readonly FlowEventId[] = [
+  "verifier",
+  "challenge",
+  "authorize",
+  "login-ui",
+  "user-interaction",
+  "login-submit",
+  "code-return",
+  "token-request",
+  "verifier-check",
+];
+
+const challengeReceivedEvents: readonly FlowEventId[] = [
+  "authorize",
+  "login-ui",
+  "user-interaction",
+  "login-submit",
+];
+
+const challengeAssociatedEvents: readonly FlowEventId[] = [
+  "code-return",
+  "token-request",
+  "verifier-check",
+];
+
+export const getPkceTeachingState = (eventId: FlowEventId): PkceTeachingState => {
+  const state: PkceTeachingState = {};
+
+  if (verifierRetentionEvents.includes(eventId)) {
+    state.retainedVerifier = pkceTeachingValues.verifier;
+  }
+
+  if (challengeReceivedEvents.includes(eventId)) {
+    state.authorizationChallenge = {
+      status: "received",
+      challenge: pkceTeachingValues.challenge,
+    };
+  }
+
+  if (challengeAssociatedEvents.includes(eventId)) {
+    state.authorizationChallenge = {
+      status: "associated",
+      challenge: pkceTeachingValues.challenge,
+      code: pkceTeachingValues.code,
+    };
+  }
+
+  if (eventId === "verifier-check") {
+    state.verification = {
+      receivedVerifier: pkceTeachingValues.verifier,
+      derivedChallenge: pkceTeachingValues.challenge,
+      associatedCode: pkceTeachingValues.code,
+      associatedChallenge: pkceTeachingValues.challenge,
+      matches: true,
+    };
+    state.description =
+      "Token Endpoint は受信した code_verifier を S256 で変換し、Authorization Code に関連付けられた code_challenge と比較します。値は一致しています。";
+  } else if (state.authorizationChallenge?.status === "associated") {
+    state.description =
+      "Authorization Server では Authorization Code と code_challenge が論理的に関連付けられています。";
+  } else if (state.authorizationChallenge?.status === "received") {
+    state.description = "Authorization Server は Authorization request の code_challenge を受け取っています。";
+  } else if (state.retainedVerifier) {
+    state.description = "Browser / App は後の Token request に使う code_verifier を保持しています。";
+  }
+
+  return state;
+};
+
 export const nextFlowIndex = (index: number): number =>
   Math.min(index + 1, flowEvents.length - 1);
