@@ -591,7 +591,7 @@ function App() {
   const completed = !canAdvance;
 
   useEffect(() => {
-    if (!playing) return;
+    if (!isPlaying || activeIndex >= flowEvents.length - 1) return;
 
     const baseDelay = reducedMotion ? REDUCED_STEP_DELAY_MS : BASE_STEP_DELAY_MS;
     const timer = window.setTimeout(() => {
@@ -600,7 +600,7 @@ function App() {
     }, scaleDuration(baseDelay, playbackRate));
 
     return () => window.clearTimeout(timer);
-  }, [playbackRate, playing, reducedMotion]);
+  }, [activeIndex, isPlaying, playbackRate, reducedMotion]);
 
   const selectStep = (index: number) => {
     setIsPlaying(false);

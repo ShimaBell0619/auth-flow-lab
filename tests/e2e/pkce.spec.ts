@@ -89,6 +89,16 @@ test("browser location cue distinguishes app, authorization UI, and callback", a
   await expect(page.getByTestId("browser-location-cue")).toContainText("架空URL例");
 });
 
+test("initial auto-play keeps scheduling beyond the first transition", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+
+  const stage = page.getByRole("region", { name: "Authorization Code + PKCE 通信ステージ" });
+  await expect(stage).toHaveAttribute("data-step", "initiate");
+  await expect(stage).toHaveAttribute("data-step", "verifier", { timeout: 3000 });
+  await expect(stage).toHaveAttribute("data-step", "challenge", { timeout: 3000 });
+});
+
 test("playback controls pause, resume from a selected step, and restart", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
