@@ -496,7 +496,7 @@ function App() {
     }, scaleDuration(baseDelay, playbackRate));
 
     return () => window.clearTimeout(timer);
-  }, [activeIndex, playbackRate, playing, reducedMotion]);
+  }, [playbackRate, playing, reducedMotion]);
 
   const selectStep = (index: number) => {
     setIsPlaying(false);
