@@ -17,6 +17,20 @@ const desktopStates = [
   { name: "desktop-api-response-1440", step: "Step 13: Response" },
 ];
 
+const experimentViews = [
+  { name: "desktop-verifier-mismatch-1440", width: 1440, height: 900 },
+  { name: "mobile-verifier-mismatch-390", width: 390, height: 844 },
+  { name: "narrow-verifier-mismatch-320", width: 320, height: 800 },
+];
+
+const enterMismatchExperiment = async (page) => {
+  await page.getByRole("button", { name: "Step 13: Response" }).click();
+  await page.getByRole("button", { name: "verifierを変えて試す" }).click();
+  await page.getByRole("button", { name: /不一致 verifier/ }).click();
+  await page.getByRole("button", { name: "送って照合する" }).click();
+  await page.waitForTimeout(200);
+};
+
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch();
 
@@ -50,6 +64,20 @@ try {
     });
   }
   await desktop.close();
+
+  for (const view of experimentViews) {
+    const page = await browser.newPage({
+      viewport: { width: view.width, height: view.height },
+      reducedMotion: "reduce",
+    });
+    await page.goto(baseURL, { waitUntil: "networkidle" });
+    await enterMismatchExperiment(page);
+    await page.screenshot({
+      path: `${output}/${view.name}.png`,
+      fullPage: true,
+    });
+    await page.close();
+  }
 } finally {
   await browser.close();
 }
